@@ -1,0 +1,241 @@
+SISTEMA DE GESTIÓN DE EQUIPOS - INTEGRA CADENA DE SERVICIO
+Autor: Yersman Esteban Garzón Cruz
+Rol: Aprendiz Área de Tecnología
+Tecnologías: Next.js, React, TypeScript, Python (Django/FastAPI), PostgreSQL
+
+DESCRIPCIÓN GENERAL
+El sistema permite a Tecnología administrar todo el inventario informático de la empresa: equipos, periféricos, licencias, mantenimientos, fechas de mantenimiento, historial, devoluciones y pasisalvos. El sistema está centralizado y funciona por sedes.
+
+OBJETIVOS DEL SISTEMA
+- Controlar el inventario de equipos y periféricos.
+- Llevar seguimiento de mantenimientos preventivos y correctivos.
+- Registrar préstamos y devoluciones.
+- Administrar licencias (legales o no).
+- Generar pasisalvos al retirarse un colaborador.
+- Control por sedes.
+- Historial detallado de todos los movimientos de un equipo.
+
+TIPO DE USUARIO (V1)
+Solo existe Administrador (Área de Tecnología).
+
+FUNCIONES DEL ADMINISTRADOR
+- Registrar, editar y ver equipos.
+- Registrar perifericos y asignar/devolver.
+- Registrar licencias.
+- Registrar mantenimientos.
+- Registrar fechas de ciclo de mantenimiento.
+- Generar pasisalvo.
+- Manejar reportes.
+- Administrar sedes.
+- Crear usuarios administradores (solo V1).
+- Ver dashboard con estadísticas.
+- Consultar historial completo.
+
+MODULOS PRINCIPALES
+1. Dashboard
+2. Información general
+3. Equipos
+4. Mantenimientos
+5. Periféricos
+6. Licencias
+7. Pasisalvo
+8. Configuración
+9. Fechas de mantenimiento
+
+DETALLE DE CADA MÓDULO
+
+1. DASHBOARD
+- Mostrar estadísticas generales.
+- Cantidad de equipos por estado técnico.
+- Cantidad de equipos por estado de disponibilidad.
+- Próximos mantenimientos vencidos o próximos.
+- Periféricos pendientes por devolver.
+- Licencias activas, vencidas o en riesgo.
+- Filtro por sede.
+
+2. INFORMACIÓN GENERAL
+- Resumen global del inventario.
+- Listado resumido de equipos.
+- Estado físico vs estado de disponibilidad.
+- Sede actual.
+- Botón para ver más detalles por equipo.
+- Filtro por sede.
+
+3. MÓDULO DE EQUIPOS
+Campos al registrar un equipo:
+- Nombre del equipo
+- Marca
+- Modelo
+- Serial
+- Sede
+- Estado técnico (nuevo, funcional, con fallas, dañado, desguazado, en reparación)
+- Estado de disponibilidad (disponible, asignado, reservado, no disponible por daño, no disponible por mantenimiento)
+- Usuario asignado (opcional)
+- Otros: base, teclado, mouse, cargador (se convierten en periféricos aparte)
+- Notas
+- Fecha de registro
+
+Funciones:
+- Ver listado general de equipos.
+- Editar información.
+- Ver detalles completos.
+- Asignar equipo a un colaborador.
+- Registrar devolución del equipo.
+- Descargar ficha técnica del equipo en PDF.
+
+4. MÓDULO DE MANTENIMIENTOS
+Cada mantenimiento pertenece a un equipo.
+Campos:
+- Equipo asociado
+- Tipo de mantenimiento (preventivo/correctivo)
+- Usuario responsable del equipo
+- Fecha de inicio
+- Fecha de finalización (puesta por el ingeniero)
+- Estado del mantenimiento (pendiente, en proceso, finalizado)
+- Descripción del problema
+- Acciones realizadas
+- Repuestos utilizados
+- Sede
+- Notas
+- Adjuntar evidencia
+- Guardar en historial automáticamente
+
+Vista de mantenimiento:
+- Tabla resumida por equipo.
+- Buscar y filtrar por estado, sede o usuario.
+- Ver mantenimiento.
+- Editar mantenimiento.
+
+5. MÓDULO: PERIFÉRICOS
+Tablas:
+A) Tabla principal de periféricos
+Campos:
+- Periférico (nombre)
+- Tipo (mouse, teclado, base, cargador, etc.)
+- Estado técnico (funcional, con fallas, dañado)
+- Estado de disponibilidad (disponible, asignado, devuelto)
+- Usuario asignado
+- Equipo asociado
+- Fecha de entrega
+- Notas
+
+Funciones:
+- Agregar un periférico.
+- Asignar periférico a usuario/equipo.
+- Registrar devolución.
+- Editar información.
+- Filtrar por sede y estado.
+
+B) Historial de periféricos
+Campos:
+- Periférico
+- Tipo
+- Usuario asignado
+- Fecha entrega
+- Fecha devolución
+- Estado final
+- Observación de devolución
+- Equipo con el que fue entregado
+
+6. MÓDULO DE LICENCIAS
+Licencias que puede tener un equipo:
+- Sistema operativo (original o pirateado)
+- Office (original o pirateado)
+- Cualquier otra licencia
+
+Campos:
+- Tipo de licencia
+- Tipo de activación
+- Clave/licencia (si existe)
+- Fecha de instalación
+- Estado actual (activa, inactiva, vencida)
+- Equipo asociado
+- Notas
+
+Vista principal:
+- Tabla general de todas las licencias.
+- Filtros por tipo, estado y sede.
+- Botón para editar.
+- Botón para ver historial del equipo.
+
+7. MÓDULO DE PASISALVO
+Objetivo: Certificar que un colaborador no tiene pendientes con TI.
+
+El pasisalvo SOLO se genera con:
+- Último equipo asignado
+- Últimos periféricos asignados
+- Reportes abiertos del último equipo
+- Daños sin resolver
+- Fechas de devoluciones
+
+Pantallas:
+A) Listado de colaboradores
+Campos:
+- Nombre
+- Documento
+- Cargo
+- Sede
+- Estado TI (sin pendientes, con pendientes)
+- Acción (Generar pasisalvo)
+
+B) Vista previa del pasisalvo
+Incluye:
+- Datos del colaborador
+- Último equipo asignado (o mensaje si no tiene)
+- Últimos periféricos asignados
+- Pendientes encontrados (si los hay)
+- Validación final del sistema
+- Botón generar PDF
+
+C) PDF generado
+- Información completa
+- Marca de agua "No válido" antes de aprobar
+- Versión oficial sin marca después
+
+8. CONFIGURACIÓN
+Funciones básicas:
+- Crear/editar usuarios administrador
+- Administrar sedes
+- Configurar opciones globales del sistema
+- Ajustar permisos del panel
+
+9. FECHAS DE MANTENIMIENTO
+Módulo auxiliar:
+- Muestra fechas del último mantenimiento.
+- Muestra fechas del próximo mantenimiento.
+- Permite editarlas manualmente si el ingeniero define un ciclo diferente a 6 meses.
+- Relacionado directamente con historial de mantenimientos.
+
+ESTADOS IMPORTANTES DEL SISTEMA
+
+Estado técnico del equipo (real):
+- Nuevo
+- Funcional
+- Con fallas
+- Dañado
+- En reparación
+- Desguazado
+
+Estado de disponibilidad (asignación):
+- Disponible
+- Asignado
+- Reservado
+- No disponible por daño
+- No disponible por mantenimiento
+
+Estado de mantenimiento:
+- Pendiente
+- En proceso
+- Finalizado
+
+Estado de periférico:
+- Funcional
+- Con fallas
+- Dañado
+
+Estado de disponibilidad periférico:
+- Disponible
+- Asignado
+- Devuelto
+
+FIN DEL DOCUMENTO
