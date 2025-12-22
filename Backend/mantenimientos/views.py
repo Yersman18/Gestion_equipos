@@ -1,7 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.parsers import JSONParser # <-- AÑADIR ESTA LÍNEA
 from .models import Mantenimiento
 from .serializers import MantenimientoSerializer
 from django.db.models import Q # Import Q for complex lookups
@@ -12,7 +11,6 @@ from django.shortcuts import get_object_or_404
 class MantenimientoViewSet(viewsets.ModelViewSet):
     queryset = Mantenimiento.objects.all().order_by('-fecha_inicio')
     serializer_class = MantenimientoSerializer
-    parser_classes = [JSONParser] # <-- AÑADIR ESTA LÍNEA
 
     def get_queryset(self):
         queryset = super().get_queryset()

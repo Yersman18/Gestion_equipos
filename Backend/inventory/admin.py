@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Sede, Equipo, Mantenimiento, Periferico, Licencia, Pasisalvo
+from sede.models import Sede
+from mantenimientos.models import Mantenimiento
+from .models import Equipo, Periferico, Licencia, Pasisalvo
 from usuarios.models import UserProfile
 
 # Register your models here.

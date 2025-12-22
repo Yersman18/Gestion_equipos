@@ -67,7 +67,8 @@ const MantenimientosPage: React.FC = () => {
         }
 
         const data = await response.json();
-        setMantenimientos(data.results || data);
+        const mantenimientosArray = Array.isArray(data) ? data : data.results || [];
+        setMantenimientos(mantenimientosArray);
       } catch (err: any) {
         setError(err.message);
       } finally {

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from inventory.models import Equipo # Asumo que el modelo Equipo está en la app 'inventory'
 from  sede.models import Sede
+from datetime import date
 
 class Mantenimiento(models.Model):
     """
@@ -28,7 +29,7 @@ class Mantenimiento(models.Model):
     estado_mantenimiento = models.CharField(max_length=50, choices=ESTADO_MANTENIMIENTO_CHOICES, default='Pendiente')
     
     # Fechas
-    fecha_inicio = models.DateField()
+    fecha_inicio = models.DateField(default=date.today)
     fecha_finalizacion = models.DateField(null=True, blank=True)
 
     # Descripción y resultados

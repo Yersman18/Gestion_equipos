@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Mantenimiento
+from mantenimientos.models import Mantenimiento
 from datetime import timedelta
 
 @receiver(post_save, sender=Mantenimiento)
@@ -10,7 +10,7 @@ def actualizar_fechas_mantenimiento_equipo(sender, instance, created, **kwargs):
     cuando un mantenimiento se marca como 'Finalizado'.
     """
     if instance.estado_mantenimiento == 'Finalizado' and instance.fecha_finalizacion:
-        equipo = instance.equipo_asociado
+        equipo = instance.equipo
         
         # Actualiza la fecha del último mantenimiento
         equipo.fecha_ultimo_mantenimiento = instance.fecha_finalizacion.date()

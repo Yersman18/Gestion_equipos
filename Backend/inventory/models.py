@@ -80,41 +80,6 @@ class Equipo(models.Model):
         verbose_name_plural = "Equipos"
 
 
-
-class Mantenimiento(models.Model):
-    TIPO_MANTENIMIENTO_CHOICES = [
-        ('Preventivo', 'Preventivo'),
-        ('Correctivo', 'Correctivo'),
-    ]
-
-    ESTADO_MANTENIMIENTO_CHOICES = [
-        ('Pendiente', 'Pendiente'),
-        ('En proceso', 'En proceso'),
-        ('Finalizado', 'Finalizado'),
-    ]
-
-    equipo_asociado = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='mantenimientos')
-    tipo_mantenimiento = models.CharField(max_length=50, choices=TIPO_MANTENIMIENTO_CHOICES)
-    usuario_responsable = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='mantenimientos_responsable')
-    fecha_inicio = models.DateTimeField()
-    fecha_finalizacion = models.DateTimeField(null=True, blank=True)
-    estado_mantenimiento = models.CharField(max_length=50, choices=ESTADO_MANTENIMIENTO_CHOICES, default='Pendiente')
-    descripcion_problema = models.TextField()
-    acciones_realizadas = models.TextField(blank=True, null=True)
-    repuestos_utilizados = models.TextField(blank=True, null=True)
-    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True)
-    notas = models.TextField(blank=True, null=True)
-    # El campo de evidencia se puede añadir después si se necesita un sistema de subida de archivos.
-    evidencia = models.FileField(upload_to='evidencias_mantenimiento/', blank=True, null=True)
-
-    class Meta:
-        verbose_name = "Mantenimiento"
-        verbose_name_plural = "Mantenimientos"
-        ordering = ['-fecha_inicio']
-
-    def __str__(self):
-        return f"Mantenimiento de {self.equipo_asociado.nombre} - {self.fecha_inicio.strftime('%Y-%m-%d')}"
-
 class Periferico(models.Model):
     TIPO_PERIFERICO_CHOICES = [
         ('Mouse', 'Mouse'),

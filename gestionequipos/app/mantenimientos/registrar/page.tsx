@@ -29,8 +29,8 @@ export default function RegistrarMantenimientoPage() {
   const { sedeActiva } = useSede();
 
   const [formData, setFormData] = useState({
-    equipo_asociado: '',
-    usuario_responsable: '',
+    equipo: '',
+    responsable: '',
     fecha_inicio: '',
     fecha_finalizacion: '',
     estado_mantenimiento: 'Pendiente',
@@ -113,23 +113,30 @@ export default function RegistrarMantenimientoPage() {
       setLoading(false);
       return;
     }
-
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-        data.append(key, String(value));
-    });
+    
+    let headers: HeadersInit = {
+      'Authorization': `Token ${token}`,
+    };
+    let body: BodyInit;
 
     if (evidencia) {
+      const data = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+          data.append(key, String(value));
+      });
       data.append('evidencia', evidencia);
+      body = data;
+      // No se establece Content-Type, el navegador lo hace por nosotros con el boundary correcto
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(formData);
     }
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Token ${token}`,
-        },
-        body: data,
+        headers: headers,
+        body: body,
       });
 
       if (!response.ok) {
@@ -149,8 +156,8 @@ export default function RegistrarMantenimientoPage() {
 
       setSuccessMessage('Mantenimiento registrado exitosamente.');
       setFormData({
-        equipo_asociado: '',
-        usuario_responsable: '',
+        equipo: '',
+        responsable: '',
         fecha_inicio: '',
         fecha_finalizacion: '',
         estado_mantenimiento: 'Pendiente',
@@ -235,13 +242,13 @@ export default function RegistrarMantenimientoPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label htmlFor="equipo_asociado" className="block text-sm font-bold text-gray-700">
+                  <label htmlFor="equipo" className="block text-sm font-bold text-gray-700">
                     💻 Equipo <span className="text-red-500">*</span>
                   </label>
                   <select
-                    id="equipo_asociado"
-                    name="equipo_asociado"
-                    value={formData.equipo_asociado}
+                    id="equipo"
+                    name="equipo"
+                    value={formData.equipo}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white"
                     required
@@ -256,13 +263,13 @@ export default function RegistrarMantenimientoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="usuario_responsable" className="block text-sm font-bold text-gray-700">
+                  <label htmlFor="responsable" className="block text-sm font-bold text-gray-700">
                     👤 Usuario Responsable <span className="text-red-500">*</span>
                   </label>
                   <select
-                    id="usuario_responsable"
-                    name="usuario_responsable"
-                    value={formData.usuario_responsable}
+                    id="responsable"
+                    name="responsable"
+                    value={formData.responsable}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white"
                     required

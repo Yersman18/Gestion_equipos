@@ -6,7 +6,9 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
-from .models import Sede, Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, Mantenimiento
+from sede.models import Sede
+from mantenimientos.models import Mantenimiento
+from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico
 from django.db.models import Count
 from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer
 import django_filters.rest_framework
@@ -52,7 +54,7 @@ class EquipoViewSet(viewsets.ModelViewSet):
 class MantenimientoFilter(django_filters.rest_framework.FilterSet):
     class Meta:
         model = Mantenimiento
-        fields = ['sede', 'estado_mantenimiento', 'tipo_mantenimiento', 'equipo_asociado']
+        fields = ['sede', 'estado_mantenimiento', 'tipo_mantenimiento', 'equipo']
 
 # Vistas para el modelo Mantenimiento
 class MantenimientoViewSet(viewsets.ModelViewSet):
@@ -69,7 +71,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         # Obtener la fecha para el próximo mantenimiento del equipo desde los datos validados
         fecha_proximo_mantenimiento_equipo = serializer.validated_data.get('fecha_proximo_mantenimiento_equipo', None)
         
-        equipo = instance.equipo_asociado
+        equipo = instance.equipo
         
         # Actualizar la fecha del último mantenimiento del equipo si el estado es 'Finalizado'
         if instance.estado_mantenimiento == 'Finalizado' and instance.fecha_finalizacion:
@@ -88,7 +90,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         # Obtener la fecha para el próximo mantenimiento del equipo desde los datos validados
         fecha_proximo_mantenimiento_equipo = serializer.validated_data.get('fecha_proximo_mantenimiento_equipo', None)
         
-        equipo = instance.equipo_asociado
+        equipo = instance.equipo
         
         # Actualizar la fecha del último mantenimiento del equipo si el estado es 'Finalizado'
         if instance.estado_mantenimiento == 'Finalizado' and instance.fecha_finalizacion:

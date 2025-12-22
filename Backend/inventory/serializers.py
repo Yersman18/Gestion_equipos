@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Sede, Equipo, Mantenimiento, Periferico, Licencia, Pasisalvo
+from sede.models import Sede # Importado desde sede.models
+from mantenimientos.models import Mantenimiento # Importado desde mantenimientos.models
+from .models import Equipo, Periferico, Licencia, Pasisalvo
 from .models import HistorialPeriferico # Asegúrate de importar el nuevo modelo
 from usuarios.serializers import UserSerializer # Importar UserSerializer
 
@@ -61,8 +63,8 @@ class EquipoSerializer(serializers.ModelSerializer):
 
 
 class MantenimientoSerializer(serializers.ModelSerializer):
-    equipo_asociado_nombre = serializers.CharField(source='equipo_asociado.nombre', read_only=True)
-    usuario_responsable_username = serializers.CharField(source='usuario_responsable.username', read_only=True, allow_null=True)
+    equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True)
+    responsable_username = serializers.CharField(source='responsable.username', read_only=True, allow_null=True)
     sede_nombre = serializers.CharField(source='sede.nombre', read_only=True, allow_null=True)
     tipo_mantenimiento_nombre = serializers.CharField(source='get_tipo_mantenimiento_display', read_only=True)
     fecha_proximo_mantenimiento_equipo = serializers.DateField(write_only=True, required=False, allow_null=True)
@@ -71,12 +73,12 @@ class MantenimientoSerializer(serializers.ModelSerializer):
         model = Mantenimiento
         fields = [
             'id',
-            'equipo_asociado',
-            'equipo_asociado_nombre',
+            'equipo',
+            'equipo_nombre',
             'tipo_mantenimiento',
             'tipo_mantenimiento_nombre',
-            'usuario_responsable',
-            'usuario_responsable_username',
+            'responsable',
+            'responsable_username',
             'fecha_inicio',
             'fecha_finalizacion',
             'estado_mantenimiento',
@@ -89,7 +91,7 @@ class MantenimientoSerializer(serializers.ModelSerializer):
             'evidencia',
             'fecha_proximo_mantenimiento_equipo',
         ]
-        read_only_fields = ['equipo_asociado_nombre', 'usuario_responsable_username', 'sede_nombre', 'tipo_mantenimiento_nombre']
+        read_only_fields = ['equipo_nombre', 'responsable_username', 'sede_nombre', 'tipo_mantenimiento_nombre']
 
 
 class PerifericoSerializer(serializers.ModelSerializer):

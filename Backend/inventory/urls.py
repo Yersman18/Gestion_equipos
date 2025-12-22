@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken import views as authtoken_views
 from .views import (
     SedeListCreateAPIView, SedeRetrieveUpdateDestroyAPIView,
-    EquipoViewSet, MantenimientoViewSet,
+    EquipoViewSet,
     PerifericoListCreateAPIView, PerifericoRetrieveUpdateDestroyAPIView,
     LicenciaListCreateAPIView, LicenciaRetrieveUpdateDestroyAPIView,
     PasisalvoListCreateAPIView, PasisalvoRetrieveUpdateDestroyAPIView,
@@ -13,7 +13,6 @@ from .views import (
 # Crear un router y registrar nuestros viewsets con él.
 router = DefaultRouter()
 router.register(r'equipos', EquipoViewSet, basename='equipo')
-router.register(r'mantenimientos', MantenimientoViewSet, basename='mantenimiento')
 
 # El API URLs ahora son determinadas automáticamente por el router.
 urlpatterns = [

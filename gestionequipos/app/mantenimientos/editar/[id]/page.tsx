@@ -7,8 +7,9 @@ import { Layout } from '@/components/Layout';
 import { useAuth } from '@/app/context/AuthContext';
 
 interface MantenimientoData {
-  equipo_asociado: number | string;
-  usuario_responsable: number | string;
+  equipo: number | string; // Corregido: de vuelta a 'equipo'
+  descripcion_problema: string;
+  responsable: number | string;
   fecha_inicio: string;
   fecha_finalizacion: string | null;
   estado_mantenimiento: string;
@@ -29,8 +30,9 @@ function EditMantenimientoForm() {
   const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [formData, setFormData] = useState<MantenimientoData>({
-    equipo_asociado: '',
-    usuario_responsable: '',
+    equipo: '', // Corregido: de vuelta a 'equipo'
+    descripcion_problema: '',
+    responsable: '',
     fecha_inicio: '',
     fecha_finalizacion: null,
     estado_mantenimiento: 'Pendiente',
@@ -38,6 +40,9 @@ function EditMantenimientoForm() {
     notas: '',
     sede: '',
   });
+  
+  const [evidencia, setEvidencia] = useState<File | null>(null);
+  const [existingEvidenciaUrl, setExistingEvidenciaUrl] = useState<string | null>(null);
 
   const [equipoNombre, setEquipoNombre] = useState('');
   const [usuarioNombre, setUsuarioNombre] = useState('');
@@ -65,8 +70,9 @@ function EditMantenimientoForm() {
         const mantenimientoData = await mantenimientoRes.json();
         
         setFormData({
-          equipo_asociado: mantenimientoData.equipo_asociado,
-          usuario_responsable: mantenimientoData.usuario_responsable,
+          equipo: mantenimientoData.equipo, // Corregido
+          descripcion_problema: mantenimientoData.descripcion_problema || '',
+          responsable: mantenimientoData.responsable,
           fecha_inicio: mantenimientoData.fecha_inicio.split('T')[0],
           fecha_finalizacion: mantenimientoData.fecha_finalizacion ? mantenimientoData.fecha_finalizacion.split('T')[0] : null,
           estado_mantenimiento: mantenimientoData.estado_mantenimiento,
@@ -77,6 +83,9 @@ function EditMantenimientoForm() {
 
         setEquipoNombre(mantenimientoData.equipo_asociado_nombre);
         setUsuarioNombre(mantenimientoData.usuario_responsable_username || 'No asignado');
+        if (mantenimientoData.evidencia) {
+          setExistingEvidenciaUrl(mantenimientoData.evidencia);
+        }
 
       } catch (err: any) {
         setError(err.message);
@@ -95,6 +104,14 @@ function EditMantenimientoForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setEvidencia(e.target.files[0]);
+    } else {
+      setEvidencia(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewMode) return;
@@ -105,20 +122,44 @@ function EditMantenimientoForm() {
 
     const { equipo_asociado_nombre, usuario_responsable_username, ...payload } = formData;
 
+    let headers: HeadersInit = {
+      'Authorization': `Token ${token}`,
+    };
+    let body: BodyInit;
+
+    if (evidencia) {
+      // Si hay un archivo, usar FormData
+      const data = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        data.append(key, value === null ? '' : String(value));
+      });
+      data.append('evidencia', evidencia);
+      body = data;
+      // No establecer 'Content-Type', el navegador lo hará automáticamente
+    } else {
+      // Si no hay archivo, usar JSON
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(payload);
+    }
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/${id}/`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`,
-        },
-        body: JSON.stringify(payload),
+        headers: headers,
+        body: body,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        const detail = Object.values(errorData).flat().join(' ');
-        throw new Error(detail || 'Error al actualizar el mantenimiento.');
+        let errorData;
+        try {
+            errorData = await response.json();
+            const messages = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`);
+            throw new Error(messages.join(' | '));
+        } catch (e) {
+            if (e instanceof Error) throw e;
+            errorData = { detail: await response.text() };
+        }
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
       }
 
       setSuccessMessage('Mantenimiento actualizado exitosamente.');
@@ -194,49 +235,8 @@ function EditMantenimientoForm() {
         </div>
 
         <div className="p-8">
-          <div onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <fieldset disabled={isViewMode}>
-              {/* Información General */}
-              <div className="mb-8">
-                <div className="flex items-center mb-5 pb-3 border-b-2 border-orange-200">
-                  <span className="text-2xl mr-2">📋</span>
-                  <h3 className="text-xl font-bold text-gray-800">Información General</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Equipo */}
-                  <div className="space-y-2">
-                    <label htmlFor="equipo" className="block text-sm font-bold text-gray-700">
-                      💻 Equipo
-                    </label>
-                    <input
-                      type="text"
-                      id="equipo"
-                      name="equipo"
-                      value={equipoNombre}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold cursor-not-allowed"
-                      readOnly
-                    />
-                  </div>
-
-                  {/* Usuario Asignado */}
-                  <div className="space-y-2">
-                    <label htmlFor="usuario_asignado" className="block text-sm font-bold text-gray-700">
-                      👤 Usuario Responsable
-                    </label>
-                    <input
-                      type="text"
-                      id="usuario_asignado"
-                      name="usuario_asignado"
-                      value={usuarioNombre}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold cursor-not-allowed"
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Detalles del Mantenimiento */}
               <div>
                 <div className="flex items-center mb-5 pb-3 border-b-2 border-green-200">
                   <span className="text-2xl mr-2">🔧</span>
@@ -244,6 +244,21 @@ function EditMantenimientoForm() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Equipo Asociado (Read-only) */}
+                  <div className="space-y-2">
+                    <label htmlFor="equipo_nombre" className="block text-sm font-bold text-gray-700">
+                      💻 Equipo Asociado
+                    </label>
+                    <input
+                      type="text"
+                      id="equipo_nombre"
+                      name="equipo_nombre"
+                      value={equipoNombre}
+                      readOnly
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                    />
+                  </div>
+
                   {/* Fecha de Inicio */}
                   <div className="space-y-2">
                     <label htmlFor="fecha_inicio" className="block text-sm font-bold text-gray-700">
@@ -254,8 +269,8 @@ function EditMantenimientoForm() {
                       id="fecha_inicio"
                       name="fecha_inicio"
                       value={formData.fecha_inicio}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      readOnly
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed cursor-not-allowed"
                       required
                     />
                   </div>
@@ -310,6 +325,22 @@ function EditMantenimientoForm() {
                     </select>
                   </div>
 
+                  {/* Descripción del Problema */}
+                  <div className="md:col-span-2 space-y-2">
+                    <label htmlFor="descripcion_problema" className="block text-sm font-bold text-gray-700">
+                      🚨 Descripción del Problema
+                    </label>
+                    <textarea
+                      id="descripcion_problema"
+                      name="descripcion_problema"
+                      rows={4}
+                      value={formData.descripcion_problema}
+                      onChange={handleChange}
+                      placeholder="Describe el problema que presenta el equipo..."
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    ></textarea>
+                  </div>
+
                   {/* Notas */}
                   <div className="md:col-span-2 space-y-2">
                     <label htmlFor="notas" className="block text-sm font-bold text-gray-700">
@@ -324,6 +355,35 @@ function EditMantenimientoForm() {
                       placeholder="Detalles adicionales del mantenimiento..."
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     ></textarea>
+                  </div>
+                  
+                  <div className="md:col-span-2 space-y-2">
+                    <label htmlFor="evidencia" className="block text-sm font-bold text-gray-700">
+                      📄 Adjuntar Nueva Evidencia (Opcional)
+                    </label>
+                    {existingEvidenciaUrl && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        Evidencia actual: 
+                        <a 
+                          href={existingEvidenciaUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-orange-600 hover:underline ml-2"
+                        >
+                          Ver archivo
+                        </a>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      id="evidencia"
+                      name="evidencia"
+                      onChange={handleFileChange}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                     <p className="text-xs text-gray-500 mt-1">
+                        Si subes un archivo nuevo, reemplazará al existente.
+                     </p>
                   </div>
                 </div>
               </div>
@@ -352,7 +412,6 @@ function EditMantenimientoForm() {
                   </button>
                   <button
                     type="submit"
-                    onClick={handleSubmit}
                     className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={loading}
                   >
@@ -374,7 +433,7 @@ function EditMantenimientoForm() {
                 </>
               )}
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </Layout>
