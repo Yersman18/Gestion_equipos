@@ -27,6 +27,10 @@ const MantenimientosPage: React.FC = () => {
   const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const router = useRouter();
 
+  // Crear dependencias primitivas y estables para el useEffect
+  const sedeId = sedeActiva?.id;
+  const isSuperuser = user?.is_superuser;
+
   useEffect(() => {
     if (isAuthLoading || isSedeLoading) {
       setLoading(true);
@@ -37,8 +41,8 @@ const MantenimientosPage: React.FC = () => {
       return;
     }
 
-    // Para usuarios no super-admins, si no hay sede activa, no mostrar nada.
-    if (!sedeActiva && !user?.is_superuser) {
+    // Usar las dependencias primitivas en la lógica
+    if (!isSuperuser && !sedeId) {
       setLoading(false);
       setMantenimientos([]);
       return;
@@ -49,10 +53,13 @@ const MantenimientosPage: React.FC = () => {
       setError(null);
       
       const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`);
-      // Si hay una sede activa, la añadimos como filtro.
-      // Si el usuario es superuser y no hay sede, se traen todos.
-      if (sedeActiva) {
-        url.searchParams.append('sede', String(sedeActiva.id));
+      
+      if (sedeId) {
+        url.searchParams.append('sede_id', String(sedeId));
+      }
+
+      if (filterEstado !== 'todos') {
+        url.searchParams.append('estado', filterEstado);
       }
 
       try {
@@ -77,38 +84,39 @@ const MantenimientosPage: React.FC = () => {
     };
 
     fetchMantenimientos();
-  }, [isAuthenticated, isAuthLoading, isSedeLoading, router, token, sedeActiva, user]);
+  }, [isAuthenticated, isAuthLoading, isSedeLoading, router, token, sedeId, isSuperuser, filterEstado]);
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este mantenimiento?')) {
+  const handleCancel = async (id: number) => {
+    if (window.confirm('¿Estás seguro de que quieres cancelar este mantenimiento? Esta acción no se puede deshacer.')) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/${id}/`, {
-          method: 'DELETE',
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/${id}/cancelar/`, {
+          method: 'POST',
           headers: {
             'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
           },
         });
 
         if (!response.ok) {
-          throw new Error('Error al eliminar el mantenimiento.');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al cancelar el mantenimiento.');
         }
 
-        setMantenimientos(mantenimientos.filter((m) => m.id !== id));
+        const updatedMantenimiento = await response.json();
+        setMantenimientos(mantenimientos.map(m => m.id === id ? updatedMantenimiento : m));
+
       } catch (err: any) {
         setError(err.message);
       }
     }
   };
 
-  // Filtrar mantenimientos
   const mantenimientosFiltrados = mantenimientos.filter(m => {
     const matchSearch = m.equipo_asociado_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       m.usuario_responsable_username?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchEstado = filterEstado === 'todos' || m.estado_mantenimiento === filterEstado;
-    return matchSearch && matchEstado;
+                       (m.usuario_responsable_username && m.usuario_responsable_username.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchSearch;
   });
 
-  // Función para obtener el color del badge según el estado
   const getEstadoBadge = (estado: string) => {
     const badges: { [key: string]: string } = {
       'Pendiente': 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -156,7 +164,6 @@ const MantenimientosPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* Header con título y botón */}
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
@@ -179,10 +186,8 @@ const MantenimientosPage: React.FC = () => {
           </Link>
         </div>
 
-        {/* Barra de búsqueda y filtros */}
         <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Búsqueda */}
             <div className="relative">
               <input
                 type="text"
@@ -193,7 +198,6 @@ const MantenimientosPage: React.FC = () => {
               />
             </div>
 
-            {/* Filtro por estado */}
             <div className="relative">
               <select
                 value={filterEstado}
@@ -204,11 +208,11 @@ const MantenimientosPage: React.FC = () => {
                 <option value="Pendiente">⏳ Pendiente</option>
                 <option value="En proceso">🔄 En proceso</option>
                 <option value="Finalizado">✅ Finalizado</option>
+                <option value="Cancelado">❌ Cancelado</option>
               </select>
             </div>
           </div>
 
-          {/* Contador de resultados */}
           <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
             <span>
               Mostrando <span className="font-bold text-green-600">{mantenimientosFiltrados.length}</span> de <span className="font-bold">{mantenimientos.length}</span> mantenimientos
@@ -228,12 +232,10 @@ const MantenimientosPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Contenido principal */}
       {mantenimientosFiltrados.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {mantenimientosFiltrados.map((m) => (
             <div key={m.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group">
-              {/* Header de la tarjeta */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -246,9 +248,7 @@ const MantenimientosPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Contenido de la tarjeta */}
               <div className="p-5 space-y-3">
-                {/* Responsable */}
                 <div className="flex items-center text-sm">
                   <span className="text-gray-500 font-medium w-28">Responsable:</span>
                   <span className="text-gray-800 font-semibold">
@@ -260,7 +260,6 @@ const MantenimientosPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Fecha de inicio */}
                 <div className="flex items-center text-sm">
                   <span className="text-gray-500 font-medium w-28">Fecha inicio:</span>
                   <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded">
@@ -272,7 +271,6 @@ const MantenimientosPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Tipo y Estado */}
                 <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 font-medium">Tipo:</span>
@@ -289,7 +287,6 @@ const MantenimientosPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Footer con acciones */}
               <div className="bg-gray-50 px-5 py-3 flex justify-between items-center">
                 <Link 
                   href={`/mantenimientos/editar/${m.id}`} 
@@ -298,12 +295,17 @@ const MantenimientosPage: React.FC = () => {
                   <span>✏️</span>
                   <span>Editar</span>
                 </Link>
-                <button 
-                  onClick={() => handleDelete(m.id)} 
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                <button
+                  onClick={() => handleCancel(m.id)}
+                  className={`font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
+                    m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                  disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
                 >
-                  <span>🗑️</span>
-                  <span>Eliminar</span>
+                  <span>❌</span>
+                  <span>Cancelar</span>
                 </button>
               </div>
             </div>
@@ -314,7 +316,7 @@ const MantenimientosPage: React.FC = () => {
           <span className="text-5xl mb-4 block">📋</span>
           <p className="text-gray-700 font-semibold text-lg">
             {mantenimientos.length === 0 && !loading
-              ? 'No hay mantenimientos registrados para la sede actual.'
+              ? 'No hay mantenimientos registrados para la sede actual o con el filtro aplicado.'
               : 'No se encontraron mantenimientos con los filtros aplicados.'}
           </p>
         </div>

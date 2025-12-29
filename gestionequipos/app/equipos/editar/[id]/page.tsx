@@ -29,6 +29,109 @@ const ESTADO_DISPONIBILIDAD_CHOICES = [
   'Disponible', 'Asignado', 'Reservado', 'No disponible por daño', 'No disponible por mantenimiento'
 ];
 
+interface HistorialItem {
+  id: number;
+  fecha_cambio: string;
+  campo_modificado: string;
+  valor_anterior: string;
+  valor_nuevo: string;
+  tipo_accion: string;
+  usuario_nombre: string | null;
+}
+
+function HistorialEquipo({ equipoId }: { equipoId: string | string[] }) {
+  const [historial, setHistorial] = useState<HistorialItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!equipoId || !token) return;
+
+    const fetchHistorial = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${equipoId}/historial/`, {
+          headers: {
+            'Authorization': `Token ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el historial de cambios.');
+        }
+        const data = await response.json();
+        setHistorial(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHistorial();
+  }, [equipoId, token]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-gray-600">Cargando historial...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+        <p className="font-bold">Error</p>
+        <p>{error}</p>
+      </div>
+    );
+  }
+  
+  if (historial.length === 0) {
+    return (
+        <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <p className="text-gray-500">No hay historial de cambios para este equipo.</p>
+        </div>
+    )
+  }
+
+  return (
+    <div className="w-full">
+        <div className="flex items-center mb-5 pb-3 border-b-2 border-gray-300">
+            <span className="text-2xl mr-2">🗂️</span>
+            <h3 className="text-xl font-bold text-gray-800">Historial de Cambios</h3>
+        </div>
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+            <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                    <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campo Modificado</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Anterior</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Nuevo</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {historial.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(item.fecha_cambio).toLocaleString()}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.usuario_nombre || 'Sistema'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.campo_modificado}</td>
+                            <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_anterior}</td>
+                            <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_nuevo}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+  );
+}
+
+
 export default function EditarEquipoPage() {
   const router = useRouter();
   const params = useParams();

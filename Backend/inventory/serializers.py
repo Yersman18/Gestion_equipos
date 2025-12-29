@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from sede.models import Sede # Importado desde sede.models
 from mantenimientos.models import Mantenimiento # Importado desde mantenimientos.models
-from .models import Equipo, Periferico, Licencia, Pasisalvo
+from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialEquipo
 from .models import HistorialPeriferico # Asegúrate de importar el nuevo modelo
 from usuarios.serializers import UserSerializer # Importar UserSerializer
 
@@ -133,3 +133,21 @@ class HistorialPerifericoSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistorialPeriferico
         fields = '__all__'
+
+class HistorialEquipoSerializer(serializers.ModelSerializer):
+    """
+    Serializer para el historial de cambios de un equipo.
+    """
+    usuario_nombre = serializers.CharField(source='usuario.username', read_only=True, allow_null=True)
+
+    class Meta:
+        model = HistorialEquipo
+        fields = [
+            'id',
+            'fecha_cambio',
+            'campo_modificado',
+            'valor_anterior',
+            'valor_nuevo',
+            'tipo_accion',
+            'usuario_nombre',
+        ]

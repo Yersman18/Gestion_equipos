@@ -60,23 +60,49 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    # Sobreescribir update para manejar relaciones
+    # Sobreescribir update para añadir lógica de negocio
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        # Proteger estados terminales
+        if instance.estado_mantenimiento in ['Finalizado', 'Cancelado']:
+            return Response(
+                {'error': f'Un mantenimiento en estado "{instance.estado_mantenimiento}" no puede ser modificado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = request.data.copy()
+
+        # Lógica de negocio: si se añade fecha de finalización, el estado cambia a Finalizado.
+        if 'fecha_finalizacion' in data and data['fecha_finalizacion']:
+            data['estado_mantenimiento'] = 'Finalizado'
+
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
         if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the cache on the instance, otherwise the
-            # 'pk' of the object would be cached and not get updated.
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
+    # Acción para cancelar un mantenimiento en lugar de borrarlo
+    @action(detail=True, methods=['post'])
+    def cancelar(self, request, pk=None):
         instance = self.get_object()
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if instance.estado_mantenimiento == 'Finalizado':
+            return Response(
+                {'error': 'Un mantenimiento finalizado no puede ser cancelado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if instance.estado_mantenimiento == 'Cancelado':
+            # Si ya está cancelado, no hacemos nada, solo confirmamos.
+            return Response({'status': 'El mantenimiento ya estaba cancelado.'}, status=status.HTTP_200_OK)
+
+        instance.estado_mantenimiento = 'Cancelado'
+        instance.save(update_fields=['estado_mantenimiento']) # Guardar solo el campo modificado
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)

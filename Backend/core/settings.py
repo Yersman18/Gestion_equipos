@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware', # Comentado temporalmente para depuración de "Unsupported Media Type"
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'inventory.middleware.CurrentUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -155,4 +156,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # El origen de tu frontend de Next.js
     "http://127.0.0.1:3000",
 ]
+
+# Media Files Settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR
 

@@ -8,9 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from sede.models import Sede
 from mantenimientos.models import Mantenimiento
-from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico
+from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo
 from django.db.models import Count
-from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer
+from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer
 import django_filters.rest_framework
 from rest_framework import viewsets
 
@@ -33,22 +33,23 @@ class EquipoFilter(django_filters.rest_framework.FilterSet):
 
 # Vistas para el modelo Equipo
 class EquipoViewSet(viewsets.ModelViewSet):
-    queryset = Equipo.objects.all().order_by('nombre')
+    queryset = Equipo.objects.filter(activo=True).order_by('nombre')
     serializer_class = EquipoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = EquipoFilter
 
     def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # La lógica de borrado en cascada/set_null debería manejarse con las señales de Django
-        # o a nivel de base de datos para mayor consistencia.
-        # Por ahora, se mantiene la lógica explícita si es necesaria.
         try:
-            self.perform_destroy(instance)
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            instance = self.get_object()
+            instance.activo = False
+            instance.empleado_asignado = None
+            instance.estado_disponibilidad = 'Disponible' # O un nuevo estado 'De baja' si se añade al modelo
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({"detail": f"No se pudo eliminar el equipo: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"detail": f"No se pudo dar de baja el equipo: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Filtro para Mantenimientos
 class MantenimientoFilter(django_filters.rest_framework.FilterSet):
@@ -105,23 +106,21 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
 
 # Vistas para el modelo Periferico
-# (Se mantienen las vistas existentes si no requieren refactorización por ahora)
 class PerifericoListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Periferico.objects.all()
     serializer_class = PerifericoSerializer
     permission_classes = [IsAuthenticated]
-    # ... (get_queryset existente)
 
 class PerifericoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Periferico.objects.all()
     serializer_class = PerifericoSerializer
     permission_classes = [IsAuthenticated]
-    # ... (update existente)
 
 # Vistas para el modelo Licencia
 class LicenciaListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Licencia.objects.all()
     serializer_class = LicenciaSerializer
     permission_classes = [IsAuthenticated]
-    # ... (get_queryset existente)
 
 class LicenciaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Licencia.objects.all()
@@ -133,7 +132,6 @@ class PasisalvoListCreateAPIView(generics.ListCreateAPIView):
     queryset = Pasisalvo.objects.all()
     serializer_class = PasisalvoSerializer
     permission_classes = [IsAuthenticated]
-    # ... (perform_create existente)
 
 class PasisalvoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Pasisalvo.objects.all()
@@ -156,17 +154,17 @@ class DashboardStatsView(APIView):
         Calcula y devuelve estadísticas clave para el dashboard.
         """
         # Contadores totales
-        total_equipos = Equipo.objects.count()
+        total_equipos = Equipo.objects.filter(activo=True).count()
         total_mantenimientos = Mantenimiento.objects.count()
         total_perifericos = Periferico.objects.count()
         total_licencias = Licencia.objects.count()
         total_usuarios = User.objects.count()
 
         # Equipos por estado técnico
-        equipos_por_estado = Equipo.objects.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
+        equipos_por_estado = Equipo.objects.filter(activo=True).values('estado_tecnico').annotate(count=Count('estado_tecnico'))
 
         # Equipos por estado de disponibilidad
-        equipos_por_disponibilidad = Equipo.objects.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
+        equipos_por_disponibilidad = Equipo.objects.filter(activo=True).values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
 
         # Mantenimientos por estado
         mantenimientos_por_estado = Mantenimiento.objects.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
@@ -189,3 +187,18 @@ class DashboardStatsView(APIView):
             'mantenimientos_por_estado': list(mantenimientos_por_estado),
         }
         return Response(stats, status=status.HTTP_200_OK)
+
+class HistorialEquipoListView(generics.ListAPIView):
+    """
+    API view to retrieve the history of changes for a specific equipo.
+    """
+    serializer_class = HistorialEquipoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        This view should return a list of all the history records
+        for the equipo as determined by the equipo_pk portion of the URL.
+        """
+        equipo_pk = self.kwargs['equipo_pk']
+        return HistorialEquipo.objects.filter(equipo__pk=equipo_pk)

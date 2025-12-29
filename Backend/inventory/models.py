@@ -48,6 +48,7 @@ class Equipo(models.Model):
     estado_tecnico = models.CharField(max_length=50, choices=[('Nuevo', 'Nuevo'), ('Funcional', 'Funcional'), ('Con fallas', 'Con fallas'), ('Dañado', 'Dañado'), ('Desguazado', 'Desguazado'), ('En reparación', 'En reparación')], default='Funcional', verbose_name="Estado Técnico")
     estado_disponibilidad = models.CharField(max_length=50, choices=[('Disponible', 'Disponible'), ('Asignado', 'Asignado'), ('Reservado', 'Reservado'), ('No disponible por daño', 'No disponible por mantenimiento')], default='Disponible', verbose_name="Estado de Disponibilidad")
     sede = models.ForeignKey('Sede', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Sede")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
     
     # --- SECCIÓN: A Cargo de ---
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, related_name='equipos_asignados', verbose_name="Empleado Asignado")
@@ -181,4 +182,28 @@ class HistorialPeriferico(models.Model):
 
     def __str__(self):
         return f"Historial de {self.periferico.nombre}"
-   
+
+class HistorialEquipo(models.Model):
+    """
+    Registra el historial de cambios de un equipo.
+    """
+    TIPO_ACCION_CHOICES = [
+        ('CREADO', 'Creado'),
+        ('ACTUALIZADO', 'Actualizado'),
+    ]
+
+    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='historial_cambios')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Usuario que realizó el cambio")
+    fecha_cambio = models.DateTimeField(auto_now_add=True, verbose_name="Fecha del Cambio")
+    campo_modificado = models.CharField(max_length=100, verbose_name="Campo Modificado")
+    valor_anterior = models.TextField(null=True, blank=True, verbose_name="Valor Anterior")
+    valor_nuevo = models.TextField(null=True, blank=True, verbose_name="Valor Nuevo")
+    tipo_accion = models.CharField(max_length=20, choices=TIPO_ACCION_CHOICES, verbose_name="Tipo de Acción")
+
+    class Meta:
+        verbose_name = "Historial de Equipo"
+        verbose_name_plural = "Historial de Equipos"
+        ordering = ['-fecha_cambio']
+
+    def __str__(self):
+        return f"Cambio en {self.equipo.nombre} por {self.usuario.username if self.usuario else 'Sistema'} el {self.fecha_cambio.strftime('%Y-%m-%d %H:%M')}"

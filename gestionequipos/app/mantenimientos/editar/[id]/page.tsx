@@ -30,7 +30,7 @@ function EditMantenimientoForm() {
   const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [formData, setFormData] = useState<MantenimientoData>({
-    equipo: '', // Corregido: de vuelta a 'equipo'
+    equipo: '',
     descripcion_problema: '',
     responsable: '',
     fecha_inicio: '',
@@ -43,6 +43,7 @@ function EditMantenimientoForm() {
   
   const [evidencia, setEvidencia] = useState<File | null>(null);
   const [existingEvidenciaUrl, setExistingEvidenciaUrl] = useState<string | null>(null);
+  const [existingEvidenciaFilename, setExistingEvidenciaFilename] = useState<string | null>(null);
 
   const [equipoNombre, setEquipoNombre] = useState('');
   const [usuarioNombre, setUsuarioNombre] = useState('');
@@ -50,6 +51,8 @@ function EditMantenimientoForm() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const isReadOnly = isViewMode || formData.estado_mantenimiento === 'Finalizado' || formData.estado_mantenimiento === 'Cancelado';
 
   useEffect(() => {
     if (isAuthLoading) return;
@@ -70,7 +73,7 @@ function EditMantenimientoForm() {
         const mantenimientoData = await mantenimientoRes.json();
         
         setFormData({
-          equipo: mantenimientoData.equipo, // Corregido
+          equipo: mantenimientoData.equipo,
           descripcion_problema: mantenimientoData.descripcion_problema || '',
           responsable: mantenimientoData.responsable,
           fecha_inicio: mantenimientoData.fecha_inicio.split('T')[0],
@@ -83,8 +86,9 @@ function EditMantenimientoForm() {
 
         setEquipoNombre(mantenimientoData.equipo_asociado_nombre);
         setUsuarioNombre(mantenimientoData.usuario_responsable_username || 'No asignado');
-        if (mantenimientoData.evidencia) {
-          setExistingEvidenciaUrl(mantenimientoData.evidencia);
+        if (mantenimientoData.evidencia_url) {
+          setExistingEvidenciaUrl(mantenimientoData.evidencia_url);
+          setExistingEvidenciaFilename(mantenimientoData.evidencia_filename);
         }
 
       } catch (err: any) {
@@ -101,7 +105,19 @@ function EditMantenimientoForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    setFormData((prev) => {
+      const newFormData = { ...prev, [name]: value };
+      // Auto-actualizar estado a 'Finalizado' si se pone una fecha de finalización
+      if (name === 'fecha_finalizacion' && value) {
+        newFormData.estado_mantenimiento = 'Finalizado';
+      }
+      // Si se quita la fecha, volver a un estado anterior si es necesario (ej. 'En proceso')
+      if (name === 'fecha_finalizacion' && !value && prev.estado_mantenimiento === 'Finalizado') {
+        newFormData.estado_mantenimiento = 'En proceso';
+      }
+      return newFormData;
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,7 +130,7 @@ function EditMantenimientoForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isViewMode) return;
+    if (isReadOnly) return;
 
     setLoading(true);
     setError(null);
@@ -128,16 +144,13 @@ function EditMantenimientoForm() {
     let body: BodyInit;
 
     if (evidencia) {
-      // Si hay un archivo, usar FormData
       const data = new FormData();
       Object.entries(payload).forEach(([key, value]) => {
         data.append(key, value === null ? '' : String(value));
       });
       data.append('evidencia', evidencia);
       body = data;
-      // No establecer 'Content-Type', el navegador lo hará automáticamente
     } else {
-      // Si no hay archivo, usar JSON
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(payload);
     }
@@ -150,16 +163,9 @@ function EditMantenimientoForm() {
       });
 
       if (!response.ok) {
-        let errorData;
-        try {
-            errorData = await response.json();
-            const messages = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`);
-            throw new Error(messages.join(' | '));
-        } catch (e) {
-            if (e instanceof Error) throw e;
-            errorData = { detail: await response.text() };
-        }
-        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+        let errorData = await response.json();
+        const errorMessage = errorData.error || Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join(' | ');
+        throw new Error(errorMessage);
       }
 
       setSuccessMessage('Mantenimiento actualizado exitosamente.');
@@ -199,20 +205,18 @@ function EditMantenimientoForm() {
 
   return (
     <Layout>
-      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center mb-2">
-          <span className="text-4xl mr-3">{isViewMode ? '👁️' : '✏️'}</span>
+          <span className="text-4xl mr-3">{isReadOnly ? '👁️' : '✏️'}</span>
           <h1 className="text-3xl font-black text-gray-800">
-            {isViewMode ? 'Detalles del Mantenimiento' : 'Editar Mantenimiento'}
+            {isReadOnly ? 'Detalles del Mantenimiento' : 'Editar Mantenimiento'}
           </h1>
         </div>
         <p className="text-gray-600 ml-14">
-          {isViewMode ? 'Visualiza los datos del mantenimiento.' : 'Modifica los datos del mantenimiento seleccionado.'}
+          {isReadOnly ? 'Visualiza los datos del mantenimiento.' : 'Modifica los datos del mantenimiento seleccionado.'}
         </p>
       </div>
 
-      {/* Mensaje de éxito */}
       {successMessage && (
         <div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-5 mb-6 shadow-lg animate-fadeIn">
           <div className="flex items-center">
@@ -225,18 +229,17 @@ function EditMantenimientoForm() {
         </div>
       )}
 
-      {/* Formulario */}
       <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
           <h2 className="text-2xl font-bold text-white flex items-center">
             <span className="text-3xl mr-3">📝</span>
-            {isViewMode ? 'Vista de Detalles' : 'Formulario de Edición'}
+            {isReadOnly ? 'Vista de Detalles' : 'Formulario de Edición'}
           </h2>
         </div>
 
         <div className="p-8">
           <form onSubmit={handleSubmit}>
-            <fieldset disabled={isViewMode}>
+            <fieldset disabled={isReadOnly}>
               <div>
                 <div className="flex items-center mb-5 pb-3 border-b-2 border-green-200">
                   <span className="text-2xl mr-2">🔧</span>
@@ -244,7 +247,6 @@ function EditMantenimientoForm() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Equipo Asociado (Read-only) */}
                   <div className="space-y-2">
                     <label htmlFor="equipo_nombre" className="block text-sm font-bold text-gray-700">
                       💻 Equipo Asociado
@@ -259,7 +261,6 @@ function EditMantenimientoForm() {
                     />
                   </div>
 
-                  {/* Fecha de Inicio */}
                   <div className="space-y-2">
                     <label htmlFor="fecha_inicio" className="block text-sm font-bold text-gray-700">
                       📅 Fecha de Inicio <span className="text-red-500">*</span>
@@ -275,7 +276,6 @@ function EditMantenimientoForm() {
                     />
                   </div>
 
-                  {/* Fecha de Finalización */}
                   <div className="space-y-2">
                     <label htmlFor="fecha_finalizacion" className="block text-sm font-bold text-gray-700">
                       🏁 Fecha de Finalización
@@ -290,7 +290,6 @@ function EditMantenimientoForm() {
                     />
                   </div>
 
-                  {/* Estado */}
                   <div className="space-y-2">
                     <label htmlFor="estado_mantenimiento" className="block text-sm font-bold text-gray-700">
                       📊 Estado del Mantenimiento
@@ -305,10 +304,10 @@ function EditMantenimientoForm() {
                       <option value="Pendiente">⏳ Pendiente</option>
                       <option value="En proceso">🔄 En proceso</option>
                       <option value="Finalizado">✅ Finalizado</option>
+                      <option value="Cancelado" disabled>❌ Cancelado</option>
                     </select>
                   </div>
 
-                  {/* Tipo */}
                   <div className="space-y-2">
                     <label htmlFor="tipo_mantenimiento" className="block text-sm font-bold text-gray-700">
                       🛠️ Tipo de Mantenimiento
@@ -325,7 +324,6 @@ function EditMantenimientoForm() {
                     </select>
                   </div>
 
-                  {/* Descripción del Problema */}
                   <div className="md:col-span-2 space-y-2">
                     <label htmlFor="descripcion_problema" className="block text-sm font-bold text-gray-700">
                       🚨 Descripción del Problema
@@ -341,7 +339,6 @@ function EditMantenimientoForm() {
                     ></textarea>
                   </div>
 
-                  {/* Notas */}
                   <div className="md:col-span-2 space-y-2">
                     <label htmlFor="notas" className="block text-sm font-bold text-gray-700">
                       📝 Notas y Observaciones
@@ -370,7 +367,7 @@ function EditMantenimientoForm() {
                           rel="noopener noreferrer"
                           className="text-orange-600 hover:underline ml-2"
                         >
-                          Ver archivo
+                          {existingEvidenciaFilename || 'Ver archivo'}
                         </a>
                       </div>
                     )}
@@ -389,48 +386,36 @@ function EditMantenimientoForm() {
               </div>
             </fieldset>
 
-            {/* Botones de acción */}
             <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 mt-8 border-t-2 border-gray-200">
-              {isViewMode ? (
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+              >
+                <span>◀️</span>
+                <span>Volver</span>
+              </button>
+              {!isReadOnly && (
                 <button
-                  type="button"
-                  onClick={() => router.push('/mantenimientos/historial')}
-                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+                  type="submit"
+                  className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
                 >
-                  <span>◀️</span>
-                  <span>Volver al Historial</span>
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Actualizando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>💾</span>
+                      <span>Actualizar Mantenimiento</span>
+                    </>
+                  )}
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/mantenimientos')}
-                    className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-                  >
-                    <span>❌</span>
-                    <span>Cancelar</span>
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        <span>Actualizando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>💾</span>
-                        <span>Actualizar Mantenimiento</span>
-                      </>
-                    )}
-                  </button>
-                </>
               )}
             </div>
           </form>

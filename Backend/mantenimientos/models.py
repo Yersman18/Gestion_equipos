@@ -17,6 +17,7 @@ class Mantenimiento(models.Model):
         ('Pendiente', 'Pendiente'),
         ('En proceso', 'En proceso'),
         ('Finalizado', 'Finalizado'),
+        ('Cancelado', 'Cancelado'),
     ]
 
     # Relaciones clave

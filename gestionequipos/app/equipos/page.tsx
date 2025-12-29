@@ -52,6 +52,8 @@ export default function EquiposPage() {
       setError(null);
       let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/equipos/`;
 
+      // Construir la URL con parámetros de forma segura
+      const params = new URLSearchParams();
       if (!user?.is_superuser) {
         if (isSedeLoading) return;
         if (!sedeActiva) {
@@ -59,16 +61,20 @@ export default function EquiposPage() {
           setIsLoadingData(false);
           return;
         }
-        apiUrl += `?sede_id=${sedeActiva.id}`;
+        params.append('sede', String(sedeActiva.id));
       }
+      
+      const url = new URL(apiUrl);
+      url.search = params.toString();
+
 
       try {
-        const response = await fetch(apiUrl, {
+        const response = await fetch(url.toString(), {
           headers: { 'Authorization': `Token ${token}` },
         });
         if (!response.ok) throw new Error('No se pudieron cargar los equipos.');
         const data = await response.json();
-        setEquipos(data);
+        setEquipos(Array.isArray(data) ? data : data.results || []);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -79,6 +85,38 @@ export default function EquiposPage() {
     fetchEquipos();
   }, [user, token, isAuthenticated, isAuthLoading, isSedeLoading, sedeActiva, router]);
 
+  const handleDarDeBaja = async (equipoId: number) => {
+    if (!token) {
+      setError('No autorizado para realizar esta acción.');
+      return;
+    }
+
+    if (window.confirm('¿Estás seguro de que quieres dar de baja este equipo? El equipo se archivará y no aparecerá en las listas principales, pero no se eliminará permanentemente.')) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${equipoId}/`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Token ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          // Si el backend no devuelve un 2xx, intenta parsear el error.
+          const errorData = await response.json().catch(() => ({ detail: 'No se pudo dar de baja el equipo. El servidor no proporcionó detalles.' }));
+          const errorMessage = errorData.detail || 'Ocurrió un error inesperado.';
+          throw new Error(errorMessage);
+        }
+
+        // Eliminar el equipo de la lista localmente para una actualización instantánea de la UI
+        setEquipos(prevEquipos => prevEquipos.filter(equipo => equipo.id !== equipoId));
+        alert('Equipo dado de baja exitosamente.');
+
+      } catch (err: any) {
+        setError(err.message);
+      }
+    }
+  };
+  
   // Filtrar equipos
   const equiposFiltrados = equipos.filter(equipo => {
     const matchSearch = equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,37 +144,6 @@ export default function EquiposPage() {
       'Inactivo': 'bg-gray-100 text-gray-700 border-gray-200',
     };
     return badges[disponibilidad] || 'bg-gray-100 text-gray-700 border-gray-200';
-  };
-
-  const handleDelete = async (equipoId: number) => {
-    if (!token) {
-      setError('No autorizado para realizar esta acción.');
-      return;
-    }
-
-    if (window.confirm('¿Estás seguro de que quieres eliminar este equipo? Esta acción no se puede deshacer.')) {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${equipoId}/`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Token ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          const errorMessage = errorData.detail || 'No se pudo eliminar el equipo.';
-          throw new Error(errorMessage);
-        }
-
-        // Eliminar el equipo de la lista localmente
-        setEquipos(prevEquipos => prevEquipos.filter(equipo => equipo.id !== equipoId));
-        alert('Equipo eliminado exitosamente.');
-
-      } catch (err: any) {
-        setError(err.message);
-      }
-    }
   };
 
   const renderContent = () => {
@@ -247,13 +254,13 @@ export default function EquiposPage() {
             </div>
 
             {/* Footer con acciones */}
-            <div className="bg-gray-50 px-5 py-3 flex justify-end space-x-2"> {/* Added space-x-2 for spacing */}
+            <div className="bg-gray-50 px-5 py-3 flex justify-end space-x-2">
               <button 
-                onClick={() => handleDelete(equipo.id)}
+                onClick={() => handleDarDeBaja(equipo.id)}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
               >
                 <span></span>
-                <span>Eliminar</span>
+                <span>Dar de Baja</span>
               </button>
               <Link 
                 href={`/equipos/editar/${equipo.id}`} 
