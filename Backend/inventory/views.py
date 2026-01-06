@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from sede.models import Sede
 from mantenimientos.models import Mantenimiento
 from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo
+from usuarios.models import UserProfile
 from django.db.models import Count
 from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer
 import django_filters.rest_framework
@@ -33,11 +34,34 @@ class EquipoFilter(django_filters.rest_framework.FilterSet):
 
 # Vistas para el modelo Equipo
 class EquipoViewSet(viewsets.ModelViewSet):
-    queryset = Equipo.objects.filter(activo=True).order_by('nombre')
     serializer_class = EquipoSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = EquipoFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Equipo.objects.filter(activo=True)
+
+        if user.is_authenticated:
+            try:
+                user_profile = user.profile
+                if user_profile.sede:
+                    queryset = queryset.filter(sede=user_profile.sede)
+                elif user.is_staff or user.is_superuser or user_profile.rol == 'ADMIN':
+                    pass 
+                else:
+                    queryset = Equipo.objects.none()
+
+            except UserProfile.DoesNotExist:
+                if user.is_staff or user.is_superuser:
+                    pass
+                else:
+                    queryset = Equipo.objects.none()
+        else:
+            queryset = Equipo.objects.none()
+
+        return queryset.order_by('nombre')
 
     def destroy(self, request, *args, **kwargs):
         try:
