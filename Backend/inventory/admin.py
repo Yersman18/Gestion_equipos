@@ -1,8 +1,8 @@
 from django.contrib import admin
-from sede.models import Sede
+
 from mantenimientos.models import Mantenimiento
 from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialEquipo
-from usuarios.models import UserProfile
+
 
 class HistorialEquipoInline(admin.TabularInline):
     model = HistorialEquipo
@@ -24,8 +24,8 @@ class EquipoAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'serial', 'empleado_asignado__nombre')
 
 # Register your models here.
-admin.site.register(Sede)
-admin.site.register(UserProfile)
+
+
 admin.site.register(Equipo, EquipoAdmin)
 admin.site.register(Mantenimiento)
 admin.site.register(Periferico)

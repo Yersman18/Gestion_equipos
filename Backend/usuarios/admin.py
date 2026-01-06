@@ -1,30 +1,39 @@
-# usuarios/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from .models import UserProfile
+from sede.models import Sede
 
-# 1. Anular el registro del modelo UserProfile independiente si ya no se necesita
-# admin.site.unregister(UserProfile) # Esto daría error si no está registrado, lo omitimos por seguridad
+# (Comentado/eliminado) UserProfileInline para probar un UserProfileAdmin directo
+# class UserProfileInline(admin.StackedInline):
+#     model = UserProfile
+#     can_delete = False
+#     verbose_name_plural = 'Perfil (Sede)'
+#     fk_name = 'user'
+#
+#     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+#         if db_field.name == "sede":
+#             kwargs["queryset"] = Sede.objects.all()
+#         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-# 2. Definir el inline para el perfil de usuario
-class UserProfileInline(admin.StackedInline):
-    model = UserProfile
-    can_delete = False
-    verbose_name_plural = 'Perfil (Sede)'
-    fk_name = 'user'
+# Nueva clase UserProfileAdmin para registrar UserProfile directamente
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'sede', 'cargo', 'area', 'rol')
+    search_fields = ('user__username', 'sede__nombre', 'cargo', 'area', 'rol')
+    list_filter = ('sede', 'rol')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "sede":
+            # Asegúrate de que el queryset incluye todas las sedes
+            kwargs["queryset"] = Sede.objects.all()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 # 3. Crear una nueva clase de administrador de usuarios que incluya el inline
 class CustomUserAdmin(UserAdmin):
+    # Ya no incluimos UserProfileInline aquí
     def get_inlines(self, request, obj=None):
-        """
-        No muestra el formulario de perfil al crear un usuario nuevo para evitar
-        el conflicto con la señal que lo crea automáticamente. Solo lo muestra
-        al editar un usuario ya existente.
-        """
-        if obj is None:
-            return ()
-        return (UserProfileInline,)
+        return () # No inlines para el UserAdmin por ahora
 
     # Opcional: para mostrar la sede en la lista de usuarios
     def get_sede(self, instance):

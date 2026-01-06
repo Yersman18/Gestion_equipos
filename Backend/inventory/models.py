@@ -1,21 +1,10 @@
 from django.db import models
 from django.conf import settings
 from empleados.models import Empleado
+from sede.models import Sede
 from django.contrib.auth.models import AbstractUser
 
-class Sede(models.Model):
-    nombre = models.CharField(max_length=100, unique=True)
-    direccion = models.CharField(max_length=255, blank=True, null=True)
-    ciudad = models.CharField(max_length=100, blank=True, null=True)
-    pais = models.CharField(max_length=100, default='Colombia') # Assuming default country
 
-    class Meta:
-        verbose_name = "Sede"
-        verbose_name_plural = "Sedes"
-        ordering = ['nombre']
-
-    def __str__(self):
-        return self.nombre
 
 
 
@@ -47,7 +36,7 @@ class Equipo(models.Model):
     # --- SECCIÓN: Estado y Ubicación ---
     estado_tecnico = models.CharField(max_length=50, choices=[('Nuevo', 'Nuevo'), ('Funcional', 'Funcional'), ('Con fallas', 'Con fallas'), ('Dañado', 'Dañado'), ('Desguazado', 'Desguazado'), ('En reparación', 'En reparación')], default='Funcional', verbose_name="Estado Técnico")
     estado_disponibilidad = models.CharField(max_length=50, choices=[('Disponible', 'Disponible'), ('Asignado', 'Asignado'), ('Reservado', 'Reservado'), ('No disponible por daño', 'No disponible por mantenimiento')], default='Disponible', verbose_name="Estado de Disponibilidad")
-    sede = models.ForeignKey('Sede', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Sede")
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Sede")
     activo = models.BooleanField(default=True, verbose_name="Activo")
     
     # --- SECCIÓN: A Cargo de ---

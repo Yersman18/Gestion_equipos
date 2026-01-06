@@ -1,0 +1,3 @@
+He preparado unas instrucciones detalladas para ti en el archivo `user_instructions.md` que he creado en la raíz de tu proyecto. Por favor, sigue los pasos cuidadosamente, que incluyen limpiar la base de datos y la caché del navegador, y luego hazme saber el resultado.
+
+Una vez que hayas completado los pasos y me indiques qué sucedió, podré seguir trabajando en el problema de la visualización de las sedes.
