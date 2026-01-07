@@ -41,27 +41,29 @@ class EquipoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Equipo.objects.filter(activo=True)
 
-        if user.is_authenticated:
-            try:
-                user_profile = user.profile
-                if user_profile.sede:
-                    queryset = queryset.filter(sede=user_profile.sede)
-                elif user.is_staff or user.is_superuser or user_profile.rol == 'ADMIN':
-                    pass 
-                else:
-                    queryset = Equipo.objects.none()
+        if not user.is_authenticated:
+            return Equipo.objects.none()
 
-            except UserProfile.DoesNotExist:
-                if user.is_staff or user.is_superuser:
-                    pass
-                else:
-                    queryset = Equipo.objects.none()
-        else:
-            queryset = Equipo.objects.none()
+        # Primero, verificar los roles de administrador que pueden ver todo
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                return Equipo.objects.filter(activo=True).order_by('nombre')
+        except UserProfile.DoesNotExist:
+            # Un superusuario podría no tener un perfil de usuario, pero debería ver todo
+            if user.is_staff or user.is_superuser:
+                return Equipo.objects.filter(activo=True).order_by('nombre')
+            else:
+                # Si no hay perfil y no es admin, no puede ver nada
+                return Equipo.objects.none()
 
-        return queryset.order_by('nombre')
+        # Si llegamos aquí, el usuario no es admin. Filtrar por su sede.
+        if hasattr(user_profile, 'sede') and user_profile.sede:
+            return Equipo.objects.filter(activo=True, sede=user_profile.sede).order_by('nombre')
+
+        # Por defecto, si un usuario normal no tiene sede, no ve nada.
+        return Equipo.objects.none()
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -83,12 +85,30 @@ class MantenimientoFilter(django_filters.rest_framework.FilterSet):
 
 # Vistas para el modelo Mantenimiento
 class MantenimientoViewSet(viewsets.ModelViewSet):
-    queryset = Mantenimiento.objects.all().order_by('-fecha_inicio')
     serializer_class = MantenimientoSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = MantenimientoFilter
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Mantenimiento.objects.none()
+
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                return Mantenimiento.objects.all().order_by('-fecha_inicio')
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                return Mantenimiento.objects.all().order_by('-fecha_inicio')
+            return Mantenimiento.objects.none()
+
+        if hasattr(user_profile, 'sede') and user_profile.sede:
+            return Mantenimiento.objects.filter(sede=user_profile.sede).order_by('-fecha_inicio')
+
+        return Mantenimiento.objects.none()
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -131,9 +151,28 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
 # Vistas para el modelo Periferico
 class PerifericoListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Periferico.objects.all()
     serializer_class = PerifericoSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Periferico.objects.none()
+
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                return Periferico.objects.all()
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                return Periferico.objects.all()
+            return Periferico.objects.none()
+
+        if hasattr(user_profile, 'sede') and user_profile.sede:
+            # Filtra los periféricos que no tienen equipo asociado O los que tienen un equipo en la sede del usuario.
+            return Periferico.objects.filter(models.Q(equipo_asociado__isnull=True) | models.Q(equipo_asociado__sede=user_profile.sede))
+
+        return Periferico.objects.none()
 
 class PerifericoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Periferico.objects.all()
@@ -175,26 +214,47 @@ class DashboardStatsView(APIView):
 
     def get(self, request, format=None):
         """
-        Calcula y devuelve estadísticas clave para el dashboard.
+        Calcula y devuelve estadísticas clave para el dashboard, filtradas por sede para usuarios no administradores.
         """
-        # Contadores totales
-        total_equipos = Equipo.objects.filter(activo=True).count()
-        total_mantenimientos = Mantenimiento.objects.count()
+        user = request.user
+        
+        # Definir QuerySets base en función del rol y la sede del usuario
+        equipos_qs = Equipo.objects.filter(activo=True)
+        mantenimientos_qs = Mantenimiento.objects.all()
+        
+        is_admin = False
+        user_profile = None
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                is_admin = True
+
+        if not is_admin:
+            if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+                equipos_qs = equipos_qs.filter(sede=user_profile.sede)
+                mantenimientos_qs = mantenimientos_qs.filter(sede=user_profile.sede)
+            else:
+                # Si el usuario no tiene sede, no debe ver datos de equipos/mantenimientos
+                equipos_qs = Equipo.objects.none()
+                mantenimientos_qs = Mantenimiento.objects.none()
+
+        # Contadores basados en los QuerySets filtrados
+        total_equipos = equipos_qs.count()
+        total_mantenimientos = mantenimientos_qs.count()
+        
+        # Contadores globales (no parecen estar ligados a sedes)
         total_perifericos = Periferico.objects.count()
         total_licencias = Licencia.objects.count()
         total_usuarios = User.objects.count()
 
-        # Equipos por estado técnico
-        equipos_por_estado = Equipo.objects.filter(activo=True).values('estado_tecnico').annotate(count=Count('estado_tecnico'))
-
-        # Equipos por estado de disponibilidad
-        equipos_por_disponibilidad = Equipo.objects.filter(activo=True).values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
-
-        # Mantenimientos por estado
-        mantenimientos_por_estado = Mantenimiento.objects.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
-
-        # Próximos mantenimientos (en los próximos 30 días)
-        proximos_mantenimientos = Mantenimiento.objects.filter(
+        # Estadísticas basadas en los QuerySets filtrados
+        equipos_por_estado = equipos_qs.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
+        equipos_por_disponibilidad = equipos_qs.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
+        mantenimientos_por_estado = mantenimientos_qs.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
+        proximos_mantenimientos = mantenimientos_qs.filter(
             fecha_inicio__gte=timezone.now(),
             fecha_inicio__lte=timezone.now() + timedelta(days=30)
         ).count()
