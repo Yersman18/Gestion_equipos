@@ -47,5 +47,13 @@ class Mantenimiento(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['equipo'],
+                name='unique_maintenance_per_equipo'
+            )
+        ]
+
     def __str__(self):
         return f"{self.tipo_mantenimiento} en {self.equipo.nombre} - {self.estado_mantenimiento}"

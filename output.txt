@@ -1,3 +1,0 @@
-He preparado unas instrucciones **críticas** y muy detalladas para ti en el archivo `user_critical_instructions.md` que he creado en la raíz de tu proyecto. Por favor, sigue los pasos cuidadosamente, ya que implican reiniciar las migraciones y la base de datos de tu proyecto.
-
-Es **esencial** que sigas todos los pasos en el orden indicado. Una vez que hayas completado las instrucciones y me indiques qué sucedió, podré seguir trabajando en la validación final del problema de la visualización de las sedes.

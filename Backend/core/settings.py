@@ -40,11 +40,11 @@ INSTALLED_APPS = [
     'rest_framework',
      'rest_framework.authtoken',# Add Django REST Framework
     'sede', # Mover sede al principio de las apps personalizadas
-    'inventory',      # Add your inventory app
-    'corsheaders',
+    'empleados',
     'usuarios',
     'mantenimientos',
-    'empleados',
+    'inventory',      # Add your inventory app
+
 
 ]
 
@@ -86,7 +86,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'db_integra', # Replace with your database name
+        'NAME': 'Integra', # Replace with your database name
         'USER': 'postgres',        # Replace with your PostgreSQL username
         'PASSWORD': '12345', # Replace with your PostgreSQL password
         'HOST': 'localhost',       # Or the IP address of your database server
