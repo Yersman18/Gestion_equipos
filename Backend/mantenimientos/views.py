@@ -3,40 +3,57 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Mantenimiento
 from .serializers import MantenimientoSerializer
-from django.db.models import Q # Import Q for complex lookups
-from datetime import date, timedelta
-from django.shortcuts import get_object_or_404
+from django.db.models import Q
+from datetime import date
+from django.utils import timezone
+from rest_framework.permissions import IsAuthenticated
+from usuarios.permissions import IsAdminOrOwnerBySede
+from usuarios.models import UserProfile
 
 
 class MantenimientoViewSet(viewsets.ModelViewSet):
-    queryset = Mantenimiento.objects.all().order_by('-fecha_inicio')
     serializer_class = MantenimientoSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
         
-        # Filtrar por estado_mantenimiento
-        estado = self.request.query_params.get('estado', None)
-        if estado:
-            queryset = queryset.filter(estado_mantenimiento=estado)
+        # Superusuarios y administradores ven todo
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                return Mantenimiento.objects.all().order_by('-fecha_inicio')
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                return Mantenimiento.objects.all().order_by('-fecha_inicio')
+            return Mantenimiento.objects.none()
 
-        # Filtrar por sede (asumiendo que el usuario tiene una sede asociada o es superuser)
-        # Esto es un ejemplo, ajusta según tu lógica de permisos y asignación de sede
-        if not self.request.user.is_superuser and hasattr(self.request.user, 'userprofile') and self.request.user.userprofile.sede:
-            queryset = queryset.filter(sede=self.request.user.userprofile.sede)
-        
-        sede_id = self.request.query_params.get('sede_id', None)
-        if sede_id:
-            queryset = queryset.filter(sede_id=sede_id)
+        # Usuarios normales ven solo los de su sede
+        user_sede = getattr(user_profile, 'sede', None)
+        if user_sede:
+            return Mantenimiento.objects.filter(sede=user_sede).order_by('-fecha_inicio')
+            
+        return Mantenimiento.objects.none()
 
-        return queryset
+    def perform_create(self, serializer):
+        """
+        Asigna la fecha de inicio como la fecha actual al crear un mantenimiento.
+        """
+        serializer.save(fecha_inicio=timezone.now().date())
 
-    # Acción personalizada para obtener próximos mantenimientos
+    def get_permissions(self):
+        """
+        Permisos más estrictos para acciones que modifican un objeto específico.
+        """
+        if self.action in ['list', 'create', 'proximos', 'historial']:
+            self.permission_classes = [IsAuthenticated]
+        else: # retrieve, update, partial_update, destroy, cancelar
+            self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
+        return super().get_permissions()
+
     @action(detail=False, methods=['get'])
     def proximos(self, request):
         today = date.today()
-        # Mantenimientos cuya fecha de inicio está en el futuro o fecha_finalizacion es null y fecha_inicio es en el futuro
-        # y que no estén 'Finalizado'
         queryset = self.get_queryset().filter(
             Q(fecha_inicio__gte=today) | Q(fecha_finalizacion__isnull=True, fecha_inicio__gte=today),
             ~Q(estado_mantenimiento='Finalizado')
@@ -45,27 +62,16 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    # Acción personalizada para el historial de mantenimientos (finalizados)
     @action(detail=False, methods=['get'])
     def historial(self, request):
         queryset = self.get_queryset().filter(estado_mantenimiento='Finalizado').order_by('-fecha_finalizacion', '-fecha_inicio')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    # Sobreescribir create para manejar relaciones
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-    # Sobreescribir update para añadir lógica de negocio
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
 
-        # Proteger estados terminales
         if instance.estado_mantenimiento in ['Finalizado', 'Cancelado']:
             return Response(
                 {'error': f'Un mantenimiento en estado "{instance.estado_mantenimiento}" no puede ser modificado.'},
@@ -73,8 +79,6 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             )
 
         data = request.data.copy()
-
-        # Lógica de negocio: si se añade fecha de finalización, el estado cambia a Finalizado.
         if 'fecha_finalizacion' in data and data['fecha_finalizacion']:
             data['estado_mantenimiento'] = 'Finalizado'
 
@@ -87,7 +91,6 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
-    # Acción para cancelar un mantenimiento en lugar de borrarlo
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):
         instance = self.get_object()
@@ -97,12 +100,38 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
                 {'error': 'Un mantenimiento finalizado no puede ser cancelado.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         if instance.estado_mantenimiento == 'Cancelado':
-            # Si ya está cancelado, no hacemos nada, solo confirmamos.
             return Response({'status': 'El mantenimiento ya estaba cancelado.'}, status=status.HTTP_200_OK)
 
         instance.estado_mantenimiento = 'Cancelado'
-        instance.save(update_fields=['estado_mantenimiento']) # Guardar solo el campo modificado
+        instance.save(update_fields=['estado_mantenimiento'])
         serializer = self.get_serializer(instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def finalizar(self, request, pk=None):
+        instance = self.get_object()
+
+        if instance.estado_mantenimiento == 'Finalizado':
+            return Response({'status': 'El mantenimiento ya estaba finalizado.'}, status=status.HTTP_200_OK)
+        
+        if instance.estado_mantenimiento == 'Cancelado':
+            return Response(
+                {'error': 'Un mantenimiento cancelado no puede ser finalizado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        evidencia_finalizacion = request.FILES.get('evidencia_finalizacion')
+        if not evidencia_finalizacion:
+            return Response(
+                {'error': 'El archivo de evidencia de finalización es obligatorio.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        instance.estado_mantenimiento = 'Finalizado'
+        instance.fecha_finalizacion = timezone.now().date()
+        instance.evidencia_finalizacion = evidencia_finalizacion
+        instance.save(update_fields=['estado_mantenimiento', 'fecha_finalizacion', 'evidencia_finalizacion'])
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)

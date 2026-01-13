@@ -10,7 +10,8 @@ from sede.models import Sede
 from mantenimientos.models import Mantenimiento
 from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo
 from usuarios.models import UserProfile
-from django.db.models import Count
+from usuarios.permissions import IsAdminOrOwnerBySede # <-- IMPORTAR
+from django.db.models import Count, Q
 from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer
 import django_filters.rest_framework
 from rest_framework import viewsets
@@ -24,7 +25,7 @@ class SedeListCreateAPIView(generics.ListCreateAPIView):
 class SedeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Sede.objects.all()
     serializer_class = SedeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede] # <-- APLICAR
 
 # Filtro para Equipos
 class EquipoFilter(django_filters.rest_framework.FilterSet):
@@ -35,7 +36,7 @@ class EquipoFilter(django_filters.rest_framework.FilterSet):
 # Vistas para el modelo Equipo
 class EquipoViewSet(viewsets.ModelViewSet):
     serializer_class = EquipoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede] # <-- APLICAR
     filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = EquipoFilter
 
@@ -64,6 +65,19 @@ class EquipoViewSet(viewsets.ModelViewSet):
 
         # Por defecto, si un usuario normal no tiene sede, no ve nada.
         return Equipo.objects.none()
+    
+    def get_permissions(self):
+        """
+        Instancia y devuelve la lista de permisos que esta vista requiere.
+        Para acciones 'list' y 'create', solo se necesita estar autenticado.
+        Para otras acciones (retrieve, update, destroy), se aplica el permiso de sede.
+        """
+        if self.action in ['list', 'create']:
+            self.permission_classes = [IsAuthenticated]
+        else:
+            self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
+        return super().get_permissions()
+
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -169,15 +183,15 @@ class PerifericoListCreateAPIView(generics.ListCreateAPIView):
             return Periferico.objects.none()
 
         if hasattr(user_profile, 'sede') and user_profile.sede:
-            # Filtra los periféricos que no tienen equipo asociado O los que tienen un equipo en la sede del usuario.
-            return Periferico.objects.filter(models.Q(equipo_asociado__isnull=True) | models.Q(equipo_asociado__sede=user_profile.sede))
+            # Filtra los periféricos para mostrar solo aquellos asociados a equipos de la sede del usuario.
+            return Periferico.objects.filter(equipo_asociado__sede=user_profile.sede)
 
         return Periferico.objects.none()
 
 class PerifericoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Periferico.objects.all()
     serializer_class = PerifericoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede] # <-- APLICAR
 
 # Vistas para el modelo Licencia
 class LicenciaListCreateAPIView(generics.ListCreateAPIView):
@@ -188,7 +202,7 @@ class LicenciaListCreateAPIView(generics.ListCreateAPIView):
 class LicenciaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Licencia.objects.all()
     serializer_class = LicenciaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede] # <-- APLICAR
 
 # Vistas para el modelo Pasisalvo
 class PasisalvoListCreateAPIView(generics.ListCreateAPIView):
@@ -218,10 +232,13 @@ class DashboardStatsView(APIView):
         """
         user = request.user
         
-        # Definir QuerySets base en función del rol y la sede del usuario
+        # Definir QuerySets base
         equipos_qs = Equipo.objects.filter(activo=True)
         mantenimientos_qs = Mantenimiento.objects.all()
-        
+        perifericos_qs = Periferico.objects.all()
+        licencias_qs = Licencia.objects.all()
+        usuarios_qs = User.objects.all()
+
         is_admin = False
         user_profile = None
         try:
@@ -233,27 +250,36 @@ class DashboardStatsView(APIView):
                 is_admin = True
 
         if not is_admin:
-            if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
-                equipos_qs = equipos_qs.filter(sede=user_profile.sede)
-                mantenimientos_qs = mantenimientos_qs.filter(sede=user_profile.sede)
+            user_sede = getattr(user_profile, 'sede', None)
+            if user_sede:
+                equipos_qs = equipos_qs.filter(sede=user_sede)
+                mantenimientos_qs = mantenimientos_qs.filter(sede=user_sede)
+                perifericos_qs = perifericos_qs.filter(equipo_asociado__sede=user_sede) # Lógica corregida
+                licencias_qs = licencias_qs.filter(equipo_asociado__sede=user_sede)
+                usuarios_qs = usuarios_qs.filter(profile__sede=user_sede)
             else:
-                # Si el usuario no tiene sede, no debe ver datos de equipos/mantenimientos
+                # Si el usuario no tiene sede, no debe ver datos
                 equipos_qs = Equipo.objects.none()
                 mantenimientos_qs = Mantenimiento.objects.none()
+                perifericos_qs = Periferico.objects.none()
+                licencias_qs = Licencia.objects.none()
+                # Aún puede verse a sí mismo en el conteo de usuarios si se decidiera así
+                usuarios_qs = User.objects.filter(pk=user.pk)
+
 
         # Contadores basados en los QuerySets filtrados
         total_equipos = equipos_qs.count()
         total_mantenimientos = mantenimientos_qs.count()
-        
-        # Contadores globales (no parecen estar ligados a sedes)
-        total_perifericos = Periferico.objects.count()
-        total_licencias = Licencia.objects.count()
-        total_usuarios = User.objects.count()
+        total_perifericos = perifericos_qs.count()
+        total_licencias = licencias_qs.count()
+        total_usuarios = usuarios_qs.count()
 
         # Estadísticas basadas en los QuerySets filtrados
         equipos_por_estado = equipos_qs.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
         equipos_por_disponibilidad = equipos_qs.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
         mantenimientos_por_estado = mantenimientos_qs.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
+        
+        # Para los próximos mantenimientos, usamos el queryset ya filtrado por sede
         proximos_mantenimientos = mantenimientos_qs.filter(
             fecha_inicio__gte=timezone.now(),
             fecha_inicio__lte=timezone.now() + timedelta(days=30)
@@ -277,12 +303,27 @@ class HistorialEquipoListView(generics.ListAPIView):
     API view to retrieve the history of changes for a specific equipo.
     """
     serializer_class = HistorialEquipoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
 
     def get_queryset(self):
         """
-        This view should return a list of all the history records
-        for the equipo as determined by the equipo_pk portion of the URL.
+        This view returns a list of history records for the equipo specified
+        in the URL, but first, it checks if the user has permission to view
+        the parent 'Equipo' object.
         """
         equipo_pk = self.kwargs['equipo_pk']
+        
+        # 1. Fetch the parent object.
+        try:
+            equipo = Equipo.objects.get(pk=equipo_pk)
+        except Equipo.DoesNotExist:
+            # This will result in a 404 response, which is appropriate.
+            # The queryset will be empty and DRF will handle it.
+            return HistorialEquipo.objects.none()
+
+        # 2. Manually check permissions on the parent object.
+        # This will trigger IsAdminOrOwnerBySede.has_object_permission(..., equipo)
+        self.check_object_permissions(self.request, equipo)
+        
+        # 3. If permission is granted, return the actual queryset.
         return HistorialEquipo.objects.filter(equipo__pk=equipo_pk)

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { useSede } from '../context/SedeContext';
+import { fetchAuthenticated } from '../utils/api'; // <-- 1. IMPORTAR
 
 interface Equipo {
   id: number;
@@ -31,7 +32,7 @@ interface Equipo {
 
 export default function EquiposPage() {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { sedeActiva, isLoading: isSedeLoading } = useSede();
 
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -50,9 +51,7 @@ export default function EquiposPage() {
     const fetchEquipos = async () => {
       setIsLoadingData(true);
       setError(null);
-      let apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/equipos/`;
-
-      // Construir la URL con parámetros de forma segura
+      
       const params = new URLSearchParams();
       if (!user?.is_superuser) {
         if (isSedeLoading) return;
@@ -64,16 +63,11 @@ export default function EquiposPage() {
         params.append('sede', String(sedeActiva.id));
       }
       
-      const url = new URL(apiUrl);
-      url.search = params.toString();
-
+      const apiUrl = `/api/equipos/?${params.toString()}`;
 
       try {
-        const response = await fetch(url.toString(), {
-          headers: { 'Authorization': `Token ${token}` },
-        });
-        if (!response.ok) throw new Error('No se pudieron cargar los equipos.');
-        const data = await response.json();
+        // <-- 2. USAR fetchAuthenticated -->
+        const data = await fetchAuthenticated(apiUrl);
         setEquipos(Array.isArray(data) ? data : data.results || []);
       } catch (err: any) {
         setError(err.message);
@@ -83,36 +77,22 @@ export default function EquiposPage() {
     };
 
     fetchEquipos();
-  }, [user, token, isAuthenticated, isAuthLoading, isSedeLoading, sedeActiva, router]);
+  }, [user, isAuthenticated, isAuthLoading, isSedeLoading, sedeActiva, router]);
 
   const handleDarDeBaja = async (equipoId: number) => {
-    if (!token) {
-      setError('No autorizado para realizar esta acción.');
-      return;
-    }
-
     if (window.confirm('¿Estás seguro de que quieres dar de baja este equipo? El equipo se archivará y no aparecerá en las listas principales, pero no se eliminará permanentemente.')) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${equipoId}/`, {
+        // <-- 3. USAR fetchAuthenticated -->
+        await fetchAuthenticated(`/api/equipos/${equipoId}/`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Token ${token}`,
-          },
         });
 
-        if (!response.ok) {
-          // Si el backend no devuelve un 2xx, intenta parsear el error.
-          const errorData = await response.json().catch(() => ({ detail: 'No se pudo dar de baja el equipo. El servidor no proporcionó detalles.' }));
-          const errorMessage = errorData.detail || 'Ocurrió un error inesperado.';
-          throw new Error(errorMessage);
-        }
-
-        // Eliminar el equipo de la lista localmente para una actualización instantánea de la UI
         setEquipos(prevEquipos => prevEquipos.filter(equipo => equipo.id !== equipoId));
         alert('Equipo dado de baja exitosamente.');
 
       } catch (err: any) {
         setError(err.message);
+        alert(`Error al dar de baja: ${err.message}`);
       }
     }
   };

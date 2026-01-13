@@ -13,6 +13,7 @@ interface Mantenimiento {
   tipo_mantenimiento: string;
   estado_mantenimiento: string;
   fecha_inicio: string;
+  fecha_finalizacion?: string | null;
   sede: number;
 }
 
@@ -26,6 +27,11 @@ const MantenimientosPage: React.FC = () => {
   const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const router = useRouter();
+
+  const [mantenimientoToFinalize, setMantenimientoToFinalize] = useState<Mantenimiento | null>(null);
+  const [evidenciaFinalizacion, setEvidenciaFinalizacion] = useState<File | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
   // Crear dependencias primitivas y estables para el useEffect
   const sedeId = sedeActiva?.id;
@@ -108,6 +114,53 @@ const MantenimientosPage: React.FC = () => {
       } catch (err: any) {
         setError(err.message);
       }
+    }
+  };
+
+  const openFinalizarModal = (mantenimiento: Mantenimiento) => {
+    setMantenimientoToFinalize(mantenimiento);
+    setFinalizeError(null);
+    setEvidenciaFinalizacion(null);
+  };
+
+  const closeFinalizarModal = () => {
+    setMantenimientoToFinalize(null);
+  };
+
+  const handleSubmitFinalizacion = async () => {
+    if (!mantenimientoToFinalize || !evidenciaFinalizacion) {
+      setFinalizeError('Debes seleccionar un archivo de evidencia.');
+      return;
+    }
+
+    setIsFinalizing(true);
+    setFinalizeError(null);
+
+    const formData = new FormData();
+    formData.append('evidencia_finalizacion', evidenciaFinalizacion);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/${mantenimientoToFinalize.id}/finalizar/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al finalizar el mantenimiento.');
+      }
+
+      const updatedMantenimiento = await response.json();
+      setMantenimientos(mantenimientos.map(m => m.id === updatedMantenimiento.id ? updatedMantenimiento : m));
+      closeFinalizarModal();
+
+    } catch (err: any) {
+      setFinalizeError(err.message);
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -287,17 +340,29 @@ const MantenimientosPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 px-5 py-3 flex justify-between items-center">
+              <div className="bg-gray-50 px-5 py-3 flex justify-end items-center gap-2">
                 <Link 
                   href={`/mantenimientos/editar/${m.id}`} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
                 >
                   <span>✏️</span>
                   <span>Editar</span>
                 </Link>
                 <button
+                  onClick={() => openFinalizarModal(m)}
+                  className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
+                    m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                  disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
+                >
+                  <span>✅</span>
+                  <span>Finalizar</span>
+                </button>
+                <button
                   onClick={() => handleCancel(m.id)}
-                  className={`font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
+                  className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
                     m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-red-600 hover:bg-red-700'
@@ -319,6 +384,58 @@ const MantenimientosPage: React.FC = () => {
               ? 'No hay mantenimientos registrados para la sede actual o con el filtro aplicado.'
               : 'No se encontraron mantenimientos con los filtros aplicados.'}
           </p>
+        </div>
+      )}
+
+      {mantenimientoToFinalize && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+            <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Finalizar Mantenimiento</h2>
+                <p className="mb-6 text-gray-600">
+                    Para finalizar el mantenimiento del equipo <span className="font-bold">{mantenimientoToFinalize.equipo_asociado_nombre}</span>, por favor adjunta la evidencia de finalización.
+                </p>
+                
+                <div className="space-y-2">
+                    <label htmlFor="evidencia_finalizacion" className="block text-sm font-bold text-gray-700">
+                        📄 Evidencia de Finalización <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="file"
+                        id="evidencia_finalizacion"
+                        name="evidencia_finalizacion"
+                        onChange={(e) => setEvidenciaFinalizacion(e.target.files ? e.target.files[0] : null)}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                        required
+                    />
+                </div>
+
+                {finalizeError && (
+                    <div className="mt-4 text-red-600 text-sm font-semibold">
+                        {finalizeError}
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-4 mt-8">
+                    <button
+                        onClick={closeFinalizarModal}
+                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors"
+                        disabled={isFinalizing}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSubmitFinalizacion}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center disabled:bg-gray-400"
+                        disabled={isFinalizing || !evidenciaFinalizacion}
+                    >
+                        {isFinalizing ? (
+                            <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Finalizando...</>
+                        ) : (
+                            'Confirmar Finalización'
+                        )}
+                    </button>
+                </div>
+            </div>
         </div>
       )}
     </Layout>

@@ -31,7 +31,6 @@ export default function RegistrarMantenimientoPage() {
   const [formData, setFormData] = useState({
     equipo: '',
     responsable: '',
-    fecha_inicio: '',
     fecha_finalizacion: '',
     estado_mantenimiento: 'Pendiente',
     tipo_mantenimiento: 'Preventivo',
@@ -114,24 +113,26 @@ export default function RegistrarMantenimientoPage() {
       setLoading(false);
       return;
     }
+
+    if (!evidencia) {
+      setError('Es obligatorio adjuntar un archivo de evidencia.');
+      setLoading(false);
+      return;
+    }
     
     let headers: HeadersInit = {
       'Authorization': `Token ${token}`,
     };
-    let body: BodyInit;
-
-    if (evidencia) {
-      const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
+    
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+        if (value) { // No agregar campos vacíos como fecha_finalizacion
           data.append(key, String(value));
-      });
-      data.append('evidencia', evidencia);
-      body = data;
-      // No se establece Content-Type, el navegador lo hace por nosotros con el boundary correcto
-    } else {
-      headers['Content-Type'] = 'application/json';
-      body = JSON.stringify(formData);
-    }
+        }
+    });
+    data.append('evidencia', evidencia);
+    const body: BodyInit = data;
+    // No se establece Content-Type, el navegador lo hace por nosotros con el boundary correcto
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`, {
@@ -159,7 +160,6 @@ export default function RegistrarMantenimientoPage() {
       setFormData({
         equipo: '',
         responsable: '',
-        fecha_inicio: '',
         fecha_finalizacion: '',
         estado_mantenimiento: 'Pendiente',
         tipo_mantenimiento: 'Preventivo',
@@ -294,18 +294,12 @@ export default function RegistrarMantenimientoPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label htmlFor="fecha_inicio" className="block text-sm font-bold text-gray-700">
-                    📅 Fecha de Inicio <span className="text-red-500">*</span>
+                  <label className="block text-sm font-bold text-gray-700">
+                    📅 Fecha de Inicio
                   </label>
-                  <input
-                    type="date"
-                    id="fecha_inicio"
-                    name="fecha_inicio"
-                    value={formData.fecha_inicio}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-                    required
-                  />
+                  <div className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed">
+                    <p className="text-gray-700 font-medium">{new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })} (Automática)</p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -335,7 +329,6 @@ export default function RegistrarMantenimientoPage() {
                   >
                     <option value="Pendiente">⏳ Pendiente</option>
                     <option value="En proceso">🔄 En Proceso</option>
-                    <option value="Finalizado">✅ Finalizado</option>
                   </select>
                 </div>
 
@@ -388,7 +381,7 @@ export default function RegistrarMantenimientoPage() {
 
                 <div className="md:col-span-2 space-y-2">
                   <label htmlFor="evidencia" className="block text-sm font-bold text-gray-700">
-                    📄 Adjuntar Evidencia (Opcional)
+                    📄 Adjuntar Evidencia <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="file"
@@ -396,6 +389,7 @@ export default function RegistrarMantenimientoPage() {
                     name="evidencia"
                     onChange={handleFileChange}
                     className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                    required
                   />
                 </div>
               </div>

@@ -39,7 +39,8 @@ class Mantenimiento(models.Model):
     repuestos_utilizados = models.TextField(blank=True)
     
     # Evidencia y notas
-    evidencia = models.FileField(upload_to='evidencias_mantenimiento/', null=True, blank=True)
+    evidencia = models.FileField(upload_to='evidencias_mantenimiento/', default='')
+    evidencia_finalizacion = models.FileField(upload_to='evidencias_mantenimiento/', null=True, blank=True)
     notas = models.TextField(blank=True)
 
     # Timestamps

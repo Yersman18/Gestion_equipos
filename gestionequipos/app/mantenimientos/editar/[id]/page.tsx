@@ -304,7 +304,7 @@ function EditMantenimientoForm() {
                       <option value="Pendiente">⏳ Pendiente</option>
                       <option value="En proceso">🔄 En proceso</option>
                       <option value="Finalizado">✅ Finalizado</option>
-                      <option value="Cancelado" disabled>❌ Cancelado</option>
+                      <option value="Cancelado">❌ Cancelado</option>
                     </select>
                   </div>
 
