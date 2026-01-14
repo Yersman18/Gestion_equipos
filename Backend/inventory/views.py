@@ -84,7 +84,6 @@ class EquipoViewSet(viewsets.ModelViewSet):
             instance = self.get_object()
             instance.activo = False
             instance.empleado_asignado = None
-            instance.estado_disponibilidad = 'Disponible' # O un nuevo estado 'De baja' si se añade al modelo
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -233,7 +232,7 @@ class DashboardStatsView(APIView):
         user = request.user
         
         # Definir QuerySets base
-        equipos_qs = Equipo.objects.filter(activo=True)
+        equipos_qs = Equipo.objects.all() # Se incluyen todos para contar los de baja
         mantenimientos_qs = Mantenimiento.objects.all()
         perifericos_qs = Periferico.objects.all()
         licencias_qs = Licencia.objects.all()
@@ -265,33 +264,44 @@ class DashboardStatsView(APIView):
                 licencias_qs = Licencia.objects.none()
                 # Aún puede verse a sí mismo en el conteo de usuarios si se decidiera así
                 usuarios_qs = User.objects.filter(pk=user.pk)
-
+        
+        # QuerySet de equipos activos para la mayoría de las estadísticas
+        equipos_activos_qs = equipos_qs.filter(activo=True)
 
         # Contadores basados en los QuerySets filtrados
-        total_equipos = equipos_qs.count()
+        total_equipos = equipos_activos_qs.count()
+        equipos_dados_de_baja = equipos_qs.filter(activo=False).count()
         total_mantenimientos = mantenimientos_qs.count()
         total_perifericos = perifericos_qs.count()
         total_licencias = licencias_qs.count()
         total_usuarios = usuarios_qs.count()
 
         # Estadísticas basadas en los QuerySets filtrados
-        equipos_por_estado = equipos_qs.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
-        equipos_por_disponibilidad = equipos_qs.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
+        equipos_por_estado = equipos_activos_qs.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
+        equipos_por_disponibilidad = equipos_activos_qs.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
         mantenimientos_por_estado = mantenimientos_qs.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
         
-        # Para los próximos mantenimientos, usamos el queryset ya filtrado por sede
+        # Conteo de mantenimientos "activos" (Pendientes o En proceso)
+        mantenimientos_activos = mantenimientos_qs.filter(
+            estado_mantenimiento__in=['Pendiente', 'En proceso']
+        ).count()
+
+        # Para los próximos mantenimientos, usamos el queryset ya filtrado por sede y estado 'Pendiente'
         proximos_mantenimientos = mantenimientos_qs.filter(
+            estado_mantenimiento='Pendiente',
             fecha_inicio__gte=timezone.now(),
             fecha_inicio__lte=timezone.now() + timedelta(days=30)
         ).count()
 
         stats = {
             'total_equipos': total_equipos,
+            'equipos_dados_de_baja': equipos_dados_de_baja,
             'total_mantenimientos': total_mantenimientos,
             'total_perifericos': total_perifericos,
             'total_licencias': total_licencias,
             'total_usuarios': total_usuarios,
             'proximos_mantenimientos': proximos_mantenimientos,
+            'mantenimientos_activos': mantenimientos_activos,
             'equipos_por_estado': list(equipos_por_estado),
             'equipos_por_disponibilidad': list(equipos_por_disponibilidad),
             'mantenimientos_por_estado': list(mantenimientos_por_estado),
