@@ -51,7 +51,8 @@ class Mantenimiento(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['equipo'],
-                name='unique_maintenance_per_equipo'
+                condition=models.Q(estado_mantenimiento__in=['Pendiente', 'En proceso']),
+                name='unique_pending_or_in_process_maintenance_per_equipo'
             )
         ]
 

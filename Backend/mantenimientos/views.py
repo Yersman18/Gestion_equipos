@@ -41,6 +41,22 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         """
         serializer.save(fecha_inicio=timezone.now().date())
 
+    def create(self, request, *args, **kwargs):
+        equipo_id = request.data.get('equipo')
+        if equipo_id:
+            # Check for existing pending or in-process maintenance
+            existing_maintenance = Mantenimiento.objects.filter(
+                equipo_id=equipo_id,
+                estado_mantenimiento__in=['Pendiente', 'En proceso']
+            ).first()
+            if existing_maintenance:
+                return Response(
+                    {'error': 'Este equipo ya tiene un mantenimiento pendiente o en proceso.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        return super().create(request, *args, **kwargs)
+
     def get_permissions(self):
         """
         Permisos más estrictos para acciones que modifican un objeto específico.
