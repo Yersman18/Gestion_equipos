@@ -14,6 +14,10 @@ interface Mantenimiento {
   estado_mantenimiento: string;
   fecha_inicio: string;
   fecha_finalizacion: string;
+  evidencia_url: string | null;
+  evidencia_filename: string | null;
+  evidencia_finalizacion_url: string | null;
+  evidencia_finalizacion_filename: string | null;
 }
 
 const HistorialMantenimientosPage: React.FC = () => {
@@ -263,7 +267,19 @@ const HistorialMantenimientosPage: React.FC = () => {
               </div>
 
               {/* Footer con acciones */}
-              <div className="bg-gray-50 px-5 py-3 flex justify-end">
+              <div className="bg-gray-50 px-5 py-3 flex justify-end gap-2">
+                {m.evidencia_finalizacion_url && (
+                  <a
+                    href={m.evidencia_finalizacion_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-teal-500 hover:bg-teal-600 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                    title={m.evidencia_finalizacion_filename || 'Ver evidencia'}
+                  >
+                    <span>📄</span>
+                    <span>Ver Evidencia</span>
+                  </a>
+                )}
                 <Link 
                   href={`/mantenimientos/editar/${m.id}?view=true`} 
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
