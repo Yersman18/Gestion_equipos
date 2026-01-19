@@ -86,7 +86,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Integra', # Replace with your database name
+        'NAME': 'db_integra', # Replace with your database name
         'USER': 'postgres',        # Replace with your PostgreSQL username
         'PASSWORD': '12345', # Replace with your PostgreSQL password
         'HOST': 'localhost',       # Or the IP address of your database server
