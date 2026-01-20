@@ -22,12 +22,12 @@ interface Empleado {
 }
 
 const ESTADO_TECNICO_CHOICES = [
-  'Nuevo', 'Funcional', 'Con fallas', 'Dañado', 'Desguazado', 'En reparación'
+  'Nuevo', 'Reacondicionado'
 ];
 
 export default function RegistrarEquipoPage() {
   const router = useRouter();
-  const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { token, isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const { sedeActiva, sedesPermitidas, isLoading: isSedeLoading } = useSede();
 
   // Campos del equipo
@@ -456,6 +456,13 @@ export default function RegistrarEquipoPage() {
                         </label>
                         <input type="time" id="horaRecibido" value={horaRecibido} onChange={(e) => setHoraRecibido(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="responsableEntrega" className="block text-sm font-bold text-gray-700">
+                        Responsable de la Entrega (TI)
+                      </label>
+                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed"/>
                     </div>
 
                     <div className="space-y-2">

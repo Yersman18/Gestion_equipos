@@ -52,7 +52,7 @@ function EditMantenimientoForm() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const isReadOnly = isViewMode || formData.estado_mantenimiento === 'Finalizado' || formData.estado_mantenimiento === 'Cancelado';
+  const isReadOnly = true;
 
   useEffect(() => {
     if (isAuthLoading) return;

@@ -316,11 +316,14 @@ const MantenimientosPage: React.FC = () => {
                 <div className="flex items-center text-sm">
                   <span className="text-gray-500 font-medium w-28">Fecha inicio:</span>
                   <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded">
-                    📅 {new Date(m.fecha_inicio).toLocaleDateString('es-ES', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
+                    📅 {(() => {
+                      const [year, month, day] = m.fecha_inicio.split('-').map(Number);
+                      return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      });
+                    })()}
                   </span>
                 </div>
 

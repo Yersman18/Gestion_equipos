@@ -78,6 +78,25 @@ class EquipoViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
         return super().get_permissions()
 
+    def perform_create(self, serializer):
+        """
+        Asigna el usuario actual como responsable de la entrega al crear un equipo.
+        """
+        serializer.save(responsable_entrega=self.request.user)
+
+    def perform_update(self, serializer):
+        """
+        Asigna el usuario actual como responsable si se está asignando un empleado.
+        """
+        # Si 'empleado_asignado' está en los datos a actualizar y tiene un valor,
+        # significa que se está realizando o cambiando una asignación.
+        if 'empleado_asignado' in serializer.validated_data and serializer.validated_data['empleado_asignado']:
+            serializer.save(responsable_entrega=self.request.user)
+        else:
+            # Si no se está asignando un empleado, simplemente guarda los demás cambios
+            # sin modificar el responsable_entrega existente.
+            serializer.save()
+
 
     def destroy(self, request, *args, **kwargs):
         try:

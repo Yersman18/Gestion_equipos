@@ -22,7 +22,7 @@ interface Empleado {
 }
 
 const ESTADO_TECNICO_CHOICES = [
-  'Nuevo', 'Funcional', 'Con fallas', 'Dañado', 'Desguazado', 'En reparación'
+  'Nuevo', 'Reacondicionado'
 ];
 
 const ESTADO_DISPONIBILIDAD_CHOICES = [
@@ -256,7 +256,7 @@ export default function EditarEquipoPage() {
         setTipoEquipo(data.tipo_equipo || 'Desktop');
         setRedesConectadas(data.redes_conectadas || '');
         setSedeId(data.sede || '');
-        setEstadoTecnico(data.estado_tecnico || 'Funcional');
+        setEstadoTecnico(data.estado_tecnico || 'Nuevo');
         setNotas(data.notas || '');
         setEstadoDisponibilidad(data.estado_disponibilidad || 'Disponible');
 
@@ -750,6 +750,13 @@ export default function EditarEquipoPage() {
                           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="responsableEntrega" className="block text-sm font-bold text-gray-700">
+                        Responsable de la Entrega (TI)
+                      </label>
+                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed"/>
                     </div>
 
                     <div className="space-y-2">
