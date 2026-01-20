@@ -84,6 +84,24 @@ class MantenimientoSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False # No siempre se suben archivos nuevos, especialmente en la actualización
     )
+    
+    # Campo para evidencia de finalización
+    evidencia_finalizacion = serializers.FileField(required=False, allow_null=True, write_only=True)
+    evidencia_finalizacion_url = serializers.SerializerMethodField()
+    evidencia_finalizacion_filename = serializers.SerializerMethodField()
+    
+    def get_evidencia_finalizacion_url(self, obj):
+        if obj.evidencia_finalizacion:
+            request = self.context.get('request') if self.context else None
+            if request:
+                return request.build_absolute_uri(obj.evidencia_finalizacion.url)
+            return obj.evidencia_finalizacion.url
+        return None
+    
+    def get_evidencia_finalizacion_filename(self, obj):
+        if obj.evidencia_finalizacion:
+            return os.path.basename(obj.evidencia_finalizacion.name)
+        return None
 
     class Meta:
         model = Mantenimiento
@@ -94,7 +112,8 @@ class MantenimientoSerializer(serializers.ModelSerializer):
             'fecha_inicio', 'fecha_finalizacion',
             'descripcion_problema', 'acciones_realizadas', 'repuestos_utilizados',
             'notas', 'creado_en', 'actualizado_en',
-            'evidencias', 'evidencias_uploads'
+            'evidencias', 'evidencias_uploads',
+            'evidencia_finalizacion', 'evidencia_finalizacion_url', 'evidencia_finalizacion_filename'
         ]
         read_only_fields = ('creado_en', 'actualizado_en', 'fecha_inicio')
 
@@ -216,6 +235,19 @@ class MantenimientoSerializer(serializers.ModelSerializer):
                     responsable_nombre = instance.responsable.get_full_name() or instance.responsable.username
                     usuario_responsable_username = instance.responsable.username
                 
+                evidencia_finalizacion_url = None
+                evidencia_finalizacion_filename = None
+                if instance.evidencia_finalizacion:
+                    evidencia_finalizacion_filename = os.path.basename(instance.evidencia_finalizacion.name)
+                    try:
+                        request = self.context.get('request') if self.context else None
+                        if request:
+                            evidencia_finalizacion_url = request.build_absolute_uri(instance.evidencia_finalizacion.url)
+                        else:
+                            evidencia_finalizacion_url = instance.evidencia_finalizacion.url
+                    except:
+                        pass
+                
                 data = {
                     'id': instance.id,
                     'equipo': instance.equipo.id if instance.equipo else None,
@@ -236,7 +268,9 @@ class MantenimientoSerializer(serializers.ModelSerializer):
                     'notas': instance.notas,
                     'creado_en': instance.creado_en,
                     'actualizado_en': instance.actualizado_en,
-                    'evidencias': evidencias_data
+                    'evidencias': evidencias_data,
+                    'evidencia_finalizacion_url': evidencia_finalizacion_url,
+                    'evidencia_finalizacion_filename': evidencia_finalizacion_filename
                 }
                 return data
             except Exception as e2:

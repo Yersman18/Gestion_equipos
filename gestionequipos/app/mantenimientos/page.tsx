@@ -15,6 +15,8 @@ interface Mantenimiento {
   fecha_inicio: string;
   fecha_finalizacion?: string | null;
   sede: number;
+  evidencia_finalizacion_url?: string | null;
+  evidencia_finalizacion_filename?: string | null;
 }
 
 const MantenimientosPage: React.FC = () => {
@@ -341,6 +343,35 @@ const MantenimientosPage: React.FC = () => {
                       {m.estado_mantenimiento}
                     </span>
                   </div>
+                  {m.fecha_finalizacion && (
+                    <div className="flex items-center text-sm pt-2 border-t border-gray-200">
+                      <span className="text-gray-500 font-medium w-28">Fecha fin:</span>
+                      <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded text-xs">
+                        📅 {(() => {
+                          const [year, month, day] = m.fecha_finalizacion.split('-').map(Number);
+                          return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          });
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                  {m.estado_mantenimiento === 'Finalizado' && m.evidencia_finalizacion_url && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <a
+                        href={m.evidencia_finalizacion_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-2 text-sm text-teal-600 hover:text-teal-800 font-semibold hover:underline"
+                        title={m.evidencia_finalizacion_filename || 'Ver evidencia de finalización'}
+                      >
+                        <span>📄</span>
+                        <span>Ver Evidencia de Finalización</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 

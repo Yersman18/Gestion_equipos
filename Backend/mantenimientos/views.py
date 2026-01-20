@@ -136,7 +136,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             return Response(error_info, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get_permissions(self):
-        if self.action in ['list', 'create', 'proximos', 'historial']:
+        if self.action in ['list', 'create', 'proximos', 'historial', 'finalizar']:
             self.permission_classes = [IsAuthenticated]
         else:
             self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
@@ -187,6 +187,42 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def finalizar(self, request, pk=None):
+        """
+        Finaliza un mantenimiento y guarda la evidencia de finalización
+        """
+        instance = self.get_object()
+
+        if instance.estado_mantenimiento == 'Finalizado':
+            return Response(
+                {'error': 'Este mantenimiento ya está finalizado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if instance.estado_mantenimiento == 'Cancelado':
+            return Response(
+                {'error': 'Un mantenimiento cancelado no puede ser finalizado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Obtener el archivo de evidencia de finalización
+        evidencia_file = request.FILES.get('evidencia_finalizacion')
+        if not evidencia_file:
+            return Response(
+                {'error': 'Debes adjuntar un archivo de evidencia de finalización.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Actualizar el mantenimiento
+        instance.estado_mantenimiento = 'Finalizado'
+        instance.fecha_finalizacion = timezone.now().date()
+        instance.evidencia_finalizacion = evidencia_file
+        instance.save()
+
+        serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):

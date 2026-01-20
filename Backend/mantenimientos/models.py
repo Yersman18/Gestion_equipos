@@ -40,6 +40,7 @@ class Mantenimiento(models.Model):
     
     # Evidencia y notas
     notas = models.TextField(blank=True)
+    evidencia_finalizacion = models.FileField(upload_to='evidencias_finalizacion/', blank=True, null=True, help_text="Evidencia de finalización del mantenimiento")
 
     # Timestamps
     creado_en = models.DateTimeField(auto_now_add=True)

@@ -49,6 +49,8 @@ function EditMantenimientoForm() {
 
   const [newEvidencias, setNewEvidencias] = useState<File[]>([]);
   const [existingEvidencias, setExistingEvidencias] = useState<EvidenciaFile[]>([]);
+  const [evidenciaFinalizacionUrl, setEvidenciaFinalizacionUrl] = useState<string | null>(null);
+  const [evidenciaFinalizacionFilename, setEvidenciaFinalizacionFilename] = useState<string | null>(null);
 
   const [equipoNombre, setEquipoNombre] = useState('');
   const [usuarioNombre, setUsuarioNombre] = useState('');
@@ -94,9 +96,14 @@ function EditMantenimientoForm() {
         if (mantenimientoData.evidencias && Array.isArray(mantenimientoData.evidencias)) {
             setExistingEvidencias(mantenimientoData.evidencias.map((ev: any) => ({
                 id: ev.id,
-                url: ev.archivo,
-                filename: ev.archivo.substring(ev.archivo.lastIndexOf('/') + 1)
+                url: ev.archivo_url || ev.archivo,
+                filename: ev.archivo_filename || ev.archivo.substring(ev.archivo.lastIndexOf('/') + 1)
             })));
+        }
+        // Cargar evidencia de finalización si existe
+        if (mantenimientoData.evidencia_finalizacion_url) {
+            setEvidenciaFinalizacionUrl(mantenimientoData.evidencia_finalizacion_url);
+            setEvidenciaFinalizacionFilename(mantenimientoData.evidencia_finalizacion_filename || 'Evidencia de finalización');
         }
 
 
@@ -397,6 +404,28 @@ function EditMantenimientoForm() {
                   </div>
                   
                   <div className="md:col-span-2 space-y-4">
+                    {/* Evidencia de Finalización */}
+                    {formData.estado_mantenimiento === 'Finalizado' && evidenciaFinalizacionUrl && (
+                      <div className="bg-gradient-to-r from-teal-50 to-teal-100 border-l-4 border-teal-500 rounded-lg p-4">
+                        <h4 className="block text-sm font-bold text-gray-700 mb-2">
+                          ✅ Evidencia de Finalización
+                        </h4>
+                        <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm">
+                          <a 
+                            href={evidenciaFinalizacionUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-teal-600 hover:text-teal-800 hover:underline font-semibold flex items-center space-x-2"
+                            title={evidenciaFinalizacionFilename || 'Ver evidencia de finalización'}
+                          >
+                            <span>📄</span>
+                            <span>{evidenciaFinalizacionFilename || 'Evidencia de finalización'}</span>
+                          </a>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Archivo adjunto</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div>
                       <h4 className="block text-sm font-bold text-gray-700 mb-2">
                         📄 Evidencias Actuales
