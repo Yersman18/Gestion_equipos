@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Mantenimiento
+from .models import Mantenimiento, EvidenciaMantenimiento
 from .serializers import MantenimientoSerializer
 from django.db.models import Q
 from datetime import date
@@ -16,21 +16,61 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Mantenimiento.objects.prefetch_related('evidencias')
+        queryset = Mantenimiento.objects.prefetch_related('evidencias').select_related('equipo', 'sede', 'responsable')
+
+        # Aplicar filtro de estado_mantenimiento si está en los parámetros
+        estado_param = self.request.query_params.get('estado_mantenimiento')
+        if estado_param:
+            queryset = queryset.filter(estado_mantenimiento=estado_param)
+
+        # Si es superusuario o staff, puede ver todos los mantenimientos
+        if user.is_staff or user.is_superuser:
+            return queryset.all().order_by('-fecha_inicio')
 
         try:
             user_profile = user.profile
-            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+            # Si es ADMIN, puede ver todos los mantenimientos
+            if hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN':
                 return queryset.all().order_by('-fecha_inicio')
         except UserProfile.DoesNotExist:
-            if user.is_staff or user.is_superuser:
-                return queryset.all().order_by('-fecha_inicio')
-            return queryset.none()
+            pass
 
-        user_sede = getattr(user_profile, 'sede', None)
+        # Obtener sede del parámetro de consulta si está disponible
+        sede_id_param = self.request.query_params.get('sede_id')
+        
+        # Obtener sede del perfil del usuario
+        user_sede = None
+        try:
+            user_profile = user.profile
+            user_sede = getattr(user_profile, 'sede', None)
+        except UserProfile.DoesNotExist:
+            pass
+
+        # Si hay un parámetro sede_id, usarlo para filtrar (prioridad más alta)
+        if sede_id_param:
+            try:
+                sede_id = int(sede_id_param)
+                # Filtrar por sede_id del parámetro
+                return queryset.filter(sede_id=sede_id).order_by('-fecha_inicio')
+            except (ValueError, TypeError):
+                pass
+
+        # Construir filtros usando Q objects para ser más inclusivo
+        from django.db.models import Q
+        filters = Q()
+        
+        # Si el usuario tiene sede asignada, incluir mantenimientos de esa sede
         if user_sede:
-            return queryset.filter(sede=user_sede).order_by('-fecha_inicio')
-            
+            filters |= Q(sede=user_sede)
+        
+        # Siempre incluir mantenimientos donde el usuario es responsable
+        filters |= Q(responsable=user)
+        
+        # Si hay filtros, aplicarlos
+        if filters:
+            return queryset.filter(filters).distinct().order_by('-fecha_inicio')
+        
+        # Si no hay filtros, retornar queryset vacío (no debería llegar aquí)
         return queryset.none()
 
     def perform_create(self, serializer):
@@ -50,15 +90,50 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
                 )
         
         data = request.data.copy()
-        evidencias = request.FILES.getlist('evidencias_uploads')
-        if evidencias:
-            data['evidencias_uploads'] = evidencias
+        # No asignamos evidencias_uploads a data, el serializer las obtendrá directamente de request.FILES
         
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Sobrescribimos el método list para manejar errores y debuggear
+        """
+        try:
+            queryset = self.get_queryset()
+            
+            # Debug: imprimir información del queryset
+            print(f"DEBUG - Usuario: {request.user.username}")
+            print(f"DEBUG - Total mantenimientos en BD: {Mantenimiento.objects.count()}")
+            print(f"DEBUG - Mantenimientos después de get_queryset: {queryset.count()}")
+            print(f"DEBUG - Query params: {dict(request.query_params)}")
+            
+            queryset = self.filter_queryset(queryset)
+            print(f"DEBUG - Mantenimientos después de filter_queryset: {queryset.count()}")
+            
+            # Paginación si está configurada
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True, context={'request': request})
+                return self.get_paginated_response(serializer.data)
+            
+            serializer = self.get_serializer(queryset, many=True, context={'request': request})
+            data = serializer.data
+            print(f"DEBUG - Datos serializados: {len(data)} mantenimientos")
+            return Response(data)
+        except Exception as e:
+            # Si hay un error, lo retornamos para debuggear
+            import traceback
+            error_info = {
+                'error': str(e),
+                'error_type': type(e).__name__,
+                'traceback': traceback.format_exc()
+            }
+            print(f"ERROR en list: {error_info}")
+            return Response(error_info, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get_permissions(self):
         if self.action in ['list', 'create', 'proximos', 'historial']:
@@ -102,9 +177,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         if 'fecha_finalizacion' in data and data['fecha_finalizacion']:
             data['estado_mantenimiento'] = 'Finalizado'
 
-        evidencias = request.FILES.getlist('evidencias_uploads')
-        if evidencias:
-            data['evidencias_uploads'] = evidencias
+        # No asignamos evidencias_uploads a data, el serializer las obtendrá directamente de request.FILES
 
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
