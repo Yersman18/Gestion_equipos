@@ -10,41 +10,35 @@ from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import IsAdminOrOwnerBySede
 from usuarios.models import UserProfile
 
-
 class MantenimientoViewSet(viewsets.ModelViewSet):
     serializer_class = MantenimientoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
 
     def get_queryset(self):
         user = self.request.user
-        
-        # Superusuarios y administradores ven todo
+        queryset = Mantenimiento.objects.prefetch_related('evidencias')
+
         try:
             user_profile = user.profile
             if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
-                return Mantenimiento.objects.all().order_by('-fecha_inicio')
+                return queryset.all().order_by('-fecha_inicio')
         except UserProfile.DoesNotExist:
             if user.is_staff or user.is_superuser:
-                return Mantenimiento.objects.all().order_by('-fecha_inicio')
-            return Mantenimiento.objects.none()
+                return queryset.all().order_by('-fecha_inicio')
+            return queryset.none()
 
-        # Usuarios normales ven solo los de su sede
         user_sede = getattr(user_profile, 'sede', None)
         if user_sede:
-            return Mantenimiento.objects.filter(sede=user_sede).order_by('-fecha_inicio')
+            return queryset.filter(sede=user_sede).order_by('-fecha_inicio')
             
-        return Mantenimiento.objects.none()
+        return queryset.none()
 
     def perform_create(self, serializer):
-        """
-        Asigna la fecha de inicio como la fecha actual al crear un mantenimiento.
-        """
         serializer.save(fecha_inicio=timezone.now().date())
 
     def create(self, request, *args, **kwargs):
         equipo_id = request.data.get('equipo')
         if equipo_id:
-            # Check for existing pending or in-process maintenance
             existing_maintenance = Mantenimiento.objects.filter(
                 equipo_id=equipo_id,
                 estado_mantenimiento__in=['Pendiente', 'En proceso']
@@ -55,22 +49,30 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         
-        return super().create(request, *args, **kwargs)
+        data = request.data.copy()
+        evidencias = request.FILES.getlist('evidencias_uploads')
+        if evidencias:
+            data['evidencias_uploads'] = evidencias
+        
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def get_permissions(self):
-        """
-        Permisos más estrictos para acciones que modifican un objeto específico.
-        """
         if self.action in ['list', 'create', 'proximos', 'historial']:
             self.permission_classes = [IsAuthenticated]
-        else: # retrieve, update, partial_update, destroy, cancelar
+        else:
             self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
         return super().get_permissions()
 
     @action(detail=False, methods=['get'])
     def proximos(self, request):
         today = date.today()
-        queryset = self.get_queryset().filter(
+        # Ajusta el queryset para ser consistente con get_queryset
+        base_queryset = self.get_queryset()
+        queryset = base_queryset.filter(
             Q(fecha_inicio__gte=today) | Q(fecha_finalizacion__isnull=True, fecha_inicio__gte=today),
             ~Q(estado_mantenimiento='Finalizado')
         ).order_by('fecha_inicio')
@@ -80,7 +82,9 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def historial(self, request):
-        queryset = self.get_queryset().filter(estado_mantenimiento='Finalizado').order_by('-fecha_finalizacion', '-fecha_inicio')
+        # Ajusta el queryset para ser consistente con get_queryset
+        base_queryset = self.get_queryset()
+        queryset = base_queryset.filter(estado_mantenimiento='Finalizado').order_by('-fecha_finalizacion', '-fecha_inicio')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -97,6 +101,10 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         data = request.data.copy()
         if 'fecha_finalizacion' in data and data['fecha_finalizacion']:
             data['estado_mantenimiento'] = 'Finalizado'
+
+        evidencias = request.FILES.getlist('evidencias_uploads')
+        if evidencias:
+            data['evidencias_uploads'] = evidencias
 
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -124,30 +132,24 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
-    def finalizar(self, request, pk=None):
-        instance = self.get_object()
+class EvidenciaMantenimientoViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
 
-        if instance.estado_mantenimiento == 'Finalizado':
-            return Response({'status': 'El mantenimiento ya estaba finalizado.'}, status=status.HTTP_200_OK)
-        
-        if instance.estado_mantenimiento == 'Cancelado':
-            return Response(
-                {'error': 'Un mantenimiento cancelado no puede ser finalizado.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    def destroy(self, request, pk=None):
+        try:
+            evidencia = EvidenciaMantenimiento.objects.get(pk=pk)
+            
+            # Check permissions
+            mantenimiento = evidencia.mantenimiento
+            user_profile = request.user.profile
 
-        evidencia_finalizacion = request.FILES.get('evidencia_finalizacion')
-        if not evidencia_finalizacion:
-            return Response(
-                {'error': 'El archivo de evidencia de finalización es obligatorio.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            # Only allow deletion if user is admin/superuser, or admin of the maintenance's sede
+            if not (request.user.is_staff or request.user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN' and user_profile.sede == mantenimiento.sede)):
+                 return Response({'error': 'No tienes permiso para eliminar esta evidencia.'}, status=status.HTTP_403_FORBIDDEN)
 
-        instance.estado_mantenimiento = 'Finalizado'
-        instance.fecha_finalizacion = timezone.now().date()
-        instance.evidencia_finalizacion = evidencia_finalizacion
-        instance.save(update_fields=['estado_mantenimiento', 'fecha_finalizacion', 'evidencia_finalizacion'])
-        
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+            evidencia.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except EvidenciaMantenimiento.DoesNotExist:
+            return Response({'error': 'La evidencia no fue encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -20,6 +20,12 @@ interface MantenimientoData {
   usuario_responsable_username?: string;
 }
 
+interface EvidenciaFile {
+  id: number;
+  url: string;
+  filename: string;
+}
+
 function EditMantenimientoForm() {
   const router = useRouter();
   const params = useParams();
@@ -40,10 +46,9 @@ function EditMantenimientoForm() {
     notas: '',
     sede: '',
   });
-  
-  const [evidencia, setEvidencia] = useState<File | null>(null);
-  const [existingEvidenciaUrl, setExistingEvidenciaUrl] = useState<string | null>(null);
-  const [existingEvidenciaFilename, setExistingEvidenciaFilename] = useState<string | null>(null);
+
+  const [newEvidencias, setNewEvidencias] = useState<File[]>([]);
+  const [existingEvidencias, setExistingEvidencias] = useState<EvidenciaFile[]>([]);
 
   const [equipoNombre, setEquipoNombre] = useState('');
   const [usuarioNombre, setUsuarioNombre] = useState('');
@@ -86,10 +91,14 @@ function EditMantenimientoForm() {
 
         setEquipoNombre(mantenimientoData.equipo_asociado_nombre);
         setUsuarioNombre(mantenimientoData.usuario_responsable_username || 'No asignado');
-        if (mantenimientoData.evidencia_url) {
-          setExistingEvidenciaUrl(mantenimientoData.evidencia_url);
-          setExistingEvidenciaFilename(mantenimientoData.evidencia_filename);
+        if (mantenimientoData.evidencias && Array.isArray(mantenimientoData.evidencias)) {
+            setExistingEvidencias(mantenimientoData.evidencias.map((ev: any) => ({
+                id: ev.id,
+                url: ev.archivo,
+                filename: ev.archivo.substring(ev.archivo.lastIndexOf('/') + 1)
+            })));
         }
+
 
       } catch (err: any) {
         setError(err.message);
@@ -121,10 +130,41 @@ function EditMantenimientoForm() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setEvidencia(e.target.files[0]);
-    } else {
-      setEvidencia(null);
+    if (e.target.files) {
+      setNewEvidencias(prev => [...prev, ...Array.from(e.target.files)]);
+    }
+  };
+
+  const handleRemoveNewEvidencia = (index: number) => {
+    const updatedEvidencias = newEvidencias.filter((_, i) => i !== index);
+    setNewEvidencias(updatedEvidencias);
+
+    const fileInput = document.getElementById('evidencia') as HTMLInputElement;
+    if (fileInput && updatedEvidencias.length === 0) {
+        fileInput.value = "";
+    }
+  };
+
+  const handleRemoveExistingEvidencia = async (id: number) => {
+    if (isViewMode) return; 
+    if (confirm('¿Estás seguro de que quieres eliminar esta evidencia? Esta acción es irreversible.')) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/evidencias/${id}/`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Token ${token}` },
+        });
+
+        if (!response.ok) {
+          throw new Error('No se pudo eliminar la evidencia.');
+        }
+
+        setExistingEvidencias(prev => prev.filter(ev => ev.id !== id));
+        setSuccessMessage('Evidencia eliminada correctamente.');
+        setTimeout(() => setSuccessMessage(null), 3000);
+
+      } catch (err: any) {
+        setError(err.message);
+      }
     }
   };
 
@@ -143,12 +183,14 @@ function EditMantenimientoForm() {
     };
     let body: BodyInit;
 
-    if (evidencia) {
+    if (newEvidencias.length > 0) {
       const data = new FormData();
       Object.entries(payload).forEach(([key, value]) => {
         data.append(key, value === null ? '' : String(value));
       });
-      data.append('evidencia', evidencia);
+      newEvidencias.forEach(file => {
+        data.append('evidencias_uploads', file);
+      });
       body = data;
     } else {
       headers['Content-Type'] = 'application/json';
@@ -354,33 +396,63 @@ function EditMantenimientoForm() {
                     ></textarea>
                   </div>
                   
-                  <div className="md:col-span-2 space-y-2">
-                    <label htmlFor="evidencia" className="block text-sm font-bold text-gray-700">
-                      📄 Adjuntar Nueva Evidencia (Opcional)
-                    </label>
-                    {existingEvidenciaUrl && (
-                      <div className="text-sm text-gray-600 mb-2">
-                        Evidencia actual: 
-                        <a 
-                          href={existingEvidenciaUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-orange-600 hover:underline ml-2"
-                        >
-                          {existingEvidenciaFilename || 'Ver archivo'}
-                        </a>
+                  <div className="md:col-span-2 space-y-4">
+                    <div>
+                      <h4 className="block text-sm font-bold text-gray-700 mb-2">
+                        📄 Evidencias Actuales
+                      </h4>
+                      {existingEvidencias.length > 0 ? (
+                        <ul className="space-y-2">
+                          {existingEvidencias.map((ev) => (
+                            <li key={ev.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                              <a href={ev.url} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline truncate" title={ev.filename}>
+                                {ev.filename}
+                              </a>
+                              {!isViewMode && (
+                                <button type="button" onClick={() => handleRemoveExistingEvidencia(ev.id)} className="ml-4 text-red-500 hover:text-red-700 font-bold" title="Eliminar evidencia">
+                                  &times;
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500">No hay evidencias existentes.</p>
+                      )}
+                    </div>
+                    
+                    {!isViewMode && (
+                      <div>
+                        <label htmlFor="evidencia" className="block text-sm font-bold text-gray-700">
+                          ➕ Adjuntar Nuevas Evidencias
+                        </label>
+                        <input
+                          type="file"
+                          id="evidencia"
+                          name="evidencias_uploads"
+                          onChange={handleFileChange}
+                          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                          multiple
+                        />
+                        {newEvidencias.length > 0 && (
+                          <div className="mt-4">
+                            <h5 className="text-sm font-bold text-gray-700 mb-2">Archivos nuevos seleccionados:</h5>
+                            <ul className="space-y-2">
+                              {newEvidencias.map((file, index) => (
+                                <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                                  <a href={URL.createObjectURL(file)} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-800 hover:underline truncate" title={file.name}>
+                                    {file.name}
+                                  </a>
+                                  <button type="button" onClick={() => handleRemoveNewEvidencia(index)} className="ml-4 text-red-500 hover:text-red-700 font-bold" title="Quitar archivo">
+                                    &times;
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
-                    <input
-                      type="file"
-                      id="evidencia"
-                      name="evidencia"
-                      onChange={handleFileChange}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
-                     <p className="text-xs text-gray-500 mt-1">
-                        Si subes un archivo nuevo, reemplazará al existente.
-                     </p>
                   </div>
                 </div>
               </div>

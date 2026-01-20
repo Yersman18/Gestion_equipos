@@ -39,8 +39,6 @@ class Mantenimiento(models.Model):
     repuestos_utilizados = models.TextField(blank=True)
     
     # Evidencia y notas
-    evidencia = models.FileField(upload_to='evidencias_mantenimiento/', default='')
-    evidencia_finalizacion = models.FileField(upload_to='evidencias_mantenimiento/', null=True, blank=True)
     notas = models.TextField(blank=True)
 
     # Timestamps
@@ -58,3 +56,13 @@ class Mantenimiento(models.Model):
 
     def __str__(self):
         return f"{self.tipo_mantenimiento} en {self.equipo.nombre} - {self.estado_mantenimiento}"
+
+class EvidenciaMantenimiento(models.Model):
+    """
+    Modelo para almacenar las evidencias (archivos/imágenes) de un mantenimiento.
+    """
+    mantenimiento = models.ForeignKey(Mantenimiento, on_delete=models.CASCADE, related_name='evidencias')
+    archivo = models.FileField(upload_to='evidencias_mantenimiento/')
+
+    def __str__(self):
+        return f"Evidencia para {self.mantenimiento.id}"

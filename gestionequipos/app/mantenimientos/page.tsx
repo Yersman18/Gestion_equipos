@@ -65,7 +65,7 @@ const MantenimientosPage: React.FC = () => {
       }
 
       if (filterEstado !== 'todos') {
-        url.searchParams.append('estado', filterEstado);
+        url.searchParams.append('estado_mantenimiento', filterEstado);
       }
 
       try {
@@ -165,9 +165,10 @@ const MantenimientosPage: React.FC = () => {
   };
 
   const mantenimientosFiltrados = mantenimientos.filter(m => {
-    const matchSearch = m.equipo_asociado_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (m.usuario_responsable_username && m.usuario_responsable_username.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchSearch;
+    const searchTermLower = searchTerm.toLowerCase();
+    const matchEquipo = m.equipo_asociado_nombre && m.equipo_asociado_nombre.toLowerCase().includes(searchTermLower);
+    const matchUsuario = m.usuario_responsable_username && m.usuario_responsable_username.toLowerCase().includes(searchTermLower);
+    return matchEquipo || matchUsuario;
   });
 
   const getEstadoBadge = (estado: string) => {

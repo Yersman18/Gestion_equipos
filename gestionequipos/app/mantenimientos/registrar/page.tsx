@@ -39,7 +39,7 @@ export default function RegistrarMantenimientoPage() {
     sede: sedeActiva?.id || '',
   });
 
-  const [evidencia, setEvidencia] = useState<File | null>(null);
+  const [evidencias, setEvidencias] = useState<File[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +95,22 @@ export default function RegistrarMantenimientoPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setEvidencia(e.target.files[0]);
+    if (e.target.files) {
+      setEvidencias(Array.from(e.target.files));
     } else {
-      setEvidencia(null);
+      setEvidencias([]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    const newEvidencias = evidencias.filter((_, i) => i !== index);
+    setEvidencias(newEvidencias);
+
+    if (newEvidencias.length === 0) {
+      const fileInput = document.getElementById('evidencias') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
     }
   };
 
@@ -114,8 +126,8 @@ export default function RegistrarMantenimientoPage() {
       return;
     }
 
-    if (!evidencia) {
-      setError('Es obligatorio adjuntar un archivo de evidencia.');
+    if (evidencias.length === 0) {
+      setError('Es obligatorio adjuntar al menos un archivo de evidencia.');
       setLoading(false);
       return;
     }
@@ -126,13 +138,16 @@ export default function RegistrarMantenimientoPage() {
     
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
-        if (value) { // No agregar campos vacíos como fecha_finalizacion
+        if (value) {
           data.append(key, String(value));
         }
     });
-    data.append('evidencia', evidencia);
+
+    evidencias.forEach((file) => {
+      data.append('evidencias_uploads', file);
+    });
+
     const body: BodyInit = data;
-    // No se establece Content-Type, el navegador lo hace por nosotros con el boundary correcto
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`, {
@@ -167,8 +182,8 @@ export default function RegistrarMantenimientoPage() {
         notas: '',
         sede: sedeActiva?.id || '',
       });
-      setEvidencia(null);
-      const fileInput = document.getElementById('evidencia') as HTMLInputElement;
+      setEvidencias([]);
+      const fileInput = document.getElementById('evidencias') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
       
     } catch (err: any) {
@@ -380,17 +395,47 @@ export default function RegistrarMantenimientoPage() {
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label htmlFor="evidencia" className="block text-sm font-bold text-gray-700">
-                    📄 Adjuntar Evidencia <span className="text-red-500">*</span>
+                  <label htmlFor="evidencias" className="block text-sm font-bold text-gray-700">
+                    📄 Adjuntar Evidencias <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="file"
-                    id="evidencia"
-                    name="evidencia"
+                    id="evidencias"
+                    name="evidencias_uploads"
                     onChange={handleFileChange}
                     className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
                     required
+                    multiple
                   />
+                  <p className="text-xs text-gray-500 mt-1">Puedes seleccionar múltiples archivos.</p>
+                  {evidencias.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-bold text-gray-700 mb-2">Archivos seleccionados:</h4>
+                      <ul className="space-y-2">
+                        {evidencias.map((file, index) => (
+                          <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                            <a 
+                              href={URL.createObjectURL(file)} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-green-600 hover:text-green-800 hover:underline truncate"
+                              title={file.name}
+                            >
+                              {file.name}
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(index)}
+                              className="ml-4 text-red-500 hover:text-red-700 font-bold"
+                              title="Eliminar archivo"
+                            >
+                              &times;
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
