@@ -38,5 +38,85 @@ textarea::placeholder {
   opacity: 1; /* Ensure full opacity in Firefox */
 }
 
+/* FullCalendar Custom Styles */
+/* Eventos Pendientes (Azul) */
+.calendar-event-pending {
+  background-color: #60A5FA !important; /* Tailwind blue-400 (lighter blue) */
+  border-color: #60A5FA !important;
+  color: #ffffff !important;
+}
 
+/* Eventos En Proceso (Amarillo) */
+.calendar-event-process {
+  background-color: #F59E0B !important; /* Tailwind yellow-600 */
+  border-color: #F59E0B !important;
+  color: #ffffff !important;
+}
 
+/* Eventos Completados (Verde) */
+.calendar-event-completed {
+  background-color: #22C55E !important; /* Tailwind green-500 */
+  border-color: #22C55E !important;
+  color: #ffffff !important;
+}
+
+/* Eventos Vencidos (Rojo) */
+.calendar-event-overdue {
+  background-color: #EF4444 !important; /* Tailwind red-500 */
+  border-color: #EF4444 !important;
+  color: #ffffff !important;
+}
+
+/* Eventos Cancelados (Gris) */
+.calendar-event-cancelled {
+  background-color: #6B7280 !important; /* Tailwind gray-500 */
+  border-color: #6B7280 !important;
+  color: #ffffff !important;
+  text-decoration: line-through;
+}
+
+/* Estilo por defecto si no coincide ninguno */
+.calendar-event-default {
+  background-color: #9CA3AF !important; /* Tailwind gray-400 */
+  border-color: #9CA3AF !important;
+  color: #ffffff !important;
+}
+
+/* Estilo para los títulos de los eventos en las vistas de día/semana */
+.fc-event-title {
+  white-space: normal; /* Permite que el texto se envuelva */
+}
+
+/* Ajustes generales para la apariencia del calendario */
+.fc .fc-toolbar-title {
+  font-size: 1.75rem; /* text-3xl */
+  font-weight: 800; /* font-extrabold */
+  color: #1F2937; /* gray-900 */
+}
+
+.fc .fc-button {
+  background-color: #4B5563 !important; /* gray-600 */
+  border-color: #4B5563 !important;
+  color: #ffffff !important;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+}
+
+.fc .fc-button:hover {
+  background-color: #374151 !important; /* gray-700 */
+  border-color: #374151 !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: #1D4ED8 !important; /* blue-700 */
+  border-color: #1D4ED8 !important;
+}
+
+.fc .fc-daygrid-event {
+  margin-bottom: 2px;
+  border-radius: 4px;
+}
+
+.fc-h-event .fc-event-main-frame {
+    flex-direction: column;
+}

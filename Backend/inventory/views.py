@@ -4,6 +4,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils import timezone
+from datetime import timedelta
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from sede.models import Sede
@@ -27,11 +28,27 @@ class SedeRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SedeSerializer
     permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede] # <-- APLICAR
 
-# Filtro para Equipos
 class EquipoFilter(django_filters.rest_framework.FilterSet):
+    status = django_filters.ChoiceFilter(
+        choices=[('overdue', 'Vencido'), ('upcoming', 'Próximo')],
+        method='filter_by_status',
+        label='Estado de Mantenimiento'
+    )
+
     class Meta:
         model = Equipo
         fields = ['sede', 'estado_tecnico', 'estado_disponibilidad']
+
+    def filter_by_status(self, queryset, name, value):
+        today = timezone.now().date()
+        if value == 'overdue':
+            return queryset.filter(fecha_proximo_mantenimiento__lt=today)
+        elif value == 'upcoming':
+            return queryset.filter(
+                fecha_proximo_mantenimiento__gte=today,
+                fecha_proximo_mantenimiento__lte=today + timedelta(days=30)
+            )
+        return queryset
 
 # Vistas para el modelo Equipo
 class EquipoViewSet(viewsets.ModelViewSet):
@@ -42,29 +59,30 @@ class EquipoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
+        
         if not user.is_authenticated:
             return Equipo.objects.none()
 
-        # Primero, verificar los roles de administrador que pueden ver todo
+        # 1. Base queryset
+        queryset = Equipo.objects.filter(activo=True).order_by('nombre')
+
+        # 3. Apply user-specific filtering (non-admins see only their sede)
         try:
             user_profile = user.profile
-            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
-                return Equipo.objects.filter(activo=True).order_by('nombre')
+            # Si no es admin/superuser, filtrar por sede del perfil
+            if not (user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN')):
+                if hasattr(user_profile, 'sede') and user_profile.sede:
+                    queryset = queryset.filter(sede=user_profile.sede)
+                else:
+                    # Si no es admin y no tiene sede, no ve nada
+                    return Equipo.objects.none()
         except UserProfile.DoesNotExist:
-            # Un superusuario podría no tener un perfil de usuario, pero debería ver todo
-            if user.is_staff or user.is_superuser:
-                return Equipo.objects.filter(activo=True).order_by('nombre')
-            else:
-                # Si no hay perfil y no es admin, no puede ver nada
+            # Si no tiene perfil y no es admin, no ve nada
+            if not (user.is_staff or user.is_superuser):
                 return Equipo.objects.none()
 
-        # Si llegamos aquí, el usuario no es admin. Filtrar por su sede.
-        if hasattr(user_profile, 'sede') and user_profile.sede:
-            return Equipo.objects.filter(activo=True, sede=user_profile.sede).order_by('nombre')
-
-        # Por defecto, si un usuario normal no tiene sede, no ve nada.
-        return Equipo.objects.none()
+        # El resto de los filtros (como 'sede' en la URL) serán manejados por DjangoFilterBackend
+        return queryset
     
     def get_permissions(self):
         """
