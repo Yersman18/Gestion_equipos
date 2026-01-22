@@ -235,7 +235,8 @@ const HistorialMantenimientosPage: React.FC = () => {
                       📅 {new Date(m.fecha_inicio).toLocaleDateString('es-ES', { 
                         year: 'numeric', 
                         month: 'short', 
-                        day: 'numeric' 
+                        day: 'numeric',
+                        timeZone: 'UTC'
                       })}
                     </span>
                   </div>

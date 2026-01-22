@@ -136,7 +136,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             return Response(error_info, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get_permissions(self):
-        if self.action in ['list', 'create', 'proximos', 'historial', 'finalizar']:
+        if self.action in ['list', 'create', 'proximos', 'historial', 'finalizar', 'iniciar_proceso']:
             self.permission_classes = [IsAuthenticated]
         else:
             self.permission_classes = [IsAuthenticated, IsAdminOrOwnerBySede]
@@ -187,6 +187,24 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def iniciar_proceso(self, request, pk=None):
+        """
+        Cambia el estado de un mantenimiento a 'En proceso'.
+        """
+        instance = self.get_object()
+
+        if instance.estado_mantenimiento != 'Pendiente':
+            return Response(
+                {'error': f'El mantenimiento debe estar en estado "Pendiente" para iniciar el proceso. Estado actual: {instance.estado_mantenimiento}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        instance.estado_mantenimiento = 'En proceso'
+        instance.save(update_fields=['estado_mantenimiento'])
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def finalizar(self, request, pk=None):

@@ -119,6 +119,31 @@ const MantenimientosPage: React.FC = () => {
     }
   };
 
+  const handleIniciarProceso = async (id: number) => {
+    if (window.confirm('¿Estás seguro de que quieres iniciar este mantenimiento? Su estado cambiará a "En proceso".')) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/${id}/iniciar_proceso/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al iniciar el proceso del mantenimiento.');
+        }
+
+        const updatedMantenimiento = await response.json();
+        setMantenimientos(mantenimientos.map(m => m.id === id ? updatedMantenimiento : m));
+
+      } catch (err: any) {
+        setError(err.message);
+      }
+    }
+  };
+
   const openFinalizarModal = (mantenimiento: Mantenimiento) => {
     setMantenimientoToFinalize(mantenimiento);
     setFinalizeError(null);
@@ -375,7 +400,16 @@ const MantenimientosPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-50 px-5 py-3 flex justify-end items-center gap-2">
+              <div className="bg-gray-50 px-5 py-3 flex flex-wrap justify-end items-center gap-2">
+                {m.estado_mantenimiento === 'Pendiente' && (
+                  <button
+                    onClick={() => handleIniciarProceso(m.id)}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                  >
+                    <span>▶️</span>
+                    <span>Iniciar Proceso</span>
+                  </button>
+                )}
                 <Link 
                   href={`/mantenimientos/editar/${m.id}`} 
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
