@@ -26,6 +26,7 @@ interface MaintenanceEvent {
     acciones_realizadas?: string;
     repuestos_utilizados?: string;
     notas?: string;
+    fecha_finalizacion?: string; // Add this line
   };
 }
 
@@ -104,9 +105,16 @@ const CalendarMantenimientosPage = () => {
         let atrasados = 0;
 
         const mappedEvents: MaintenanceEvent[] = data.map((mantenimiento: any) => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
+          const maintenanceDueDateStr = mantenimiento.fecha_finalizacion || mantenimiento.fecha_inicio;
+          const maintenanceDueDate = new Date(maintenanceDueDateStr);
+          maintenanceDueDate.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
           const isOverdue = mantenimiento.estado_mantenimiento !== 'Finalizado' && 
-                            new Date(mantenimiento.fecha_inicio) < new Date() && 
-                            mantenimiento.estado_mantenimiento !== 'Cancelado';
+                            mantenimiento.estado_mantenimiento !== 'Cancelado' &&
+                            maintenanceDueDate < today;
 
           // Contar estadísticas
           if (isOverdue) {
@@ -151,7 +159,7 @@ const CalendarMantenimientosPage = () => {
             id: mantenimiento.id.toString(),
             title: `${mantenimiento.tipo_mantenimiento} - ${mantenimiento.equipo_nombre}`,
             start: mantenimiento.fecha_inicio,
-            end: mantenimiento.fecha_inicio, // Siempre mostrar solo el día de inicio en el calendario
+            end: mantenimiento.fecha_inicio,
             allDay: true,
             classNames: [eventClassName],
             extendedProps: {
@@ -163,6 +171,7 @@ const CalendarMantenimientosPage = () => {
               acciones_realizadas: mantenimiento.acciones_realizadas,
               repuestos_utilizados: mantenimiento.repuestos_utilizados,
               notas: mantenimiento.notas,
+              fecha_finalizacion: mantenimiento.fecha_finalizacion, // Añadir fecha_finalizacion a extendedProps
             },
           };
         });
@@ -490,7 +499,16 @@ interface MaintenanceDetailModalProps {
 
 const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, onClose }) => {
   const getStatusInfo = (status: string) => {
-    const isOverdue = status !== 'Finalizado' && new Date(event.start) < new Date() && status !== 'Cancelado';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a medianoche
+
+    const maintenanceDueDateStr = event.extendedProps.fecha_finalizacion || event.start;
+    const maintenanceDueDate = new Date(maintenanceDueDateStr);
+    maintenanceDueDate.setHours(0, 0, 0, 0); // Normalizar a medianoche
+    
+    const isOverdue = status !== 'Finalizado' && 
+                      status !== 'Cancelado' &&
+                      maintenanceDueDate < today;
     
     if (isOverdue) {
       return {
@@ -593,22 +611,28 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
             <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
               <p className="text-xs text-gray-300 mb-1">Fecha de Inicio</p>
               <p className="text-sm font-semibold">
-                {new Date(event.start).toLocaleDateString('es-ES', { 
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric' 
-                })}
+                {(() => {
+                  const [year, month, day] = event.start.split('-').map(Number);
+                  return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric' 
+                  });
+                })()}
               </p>
             </div>
             {event.end && event.start !== event.end && (
               <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                 <p className="text-xs text-gray-300 mb-1">Fecha de Fin</p>
                 <p className="text-sm font-semibold">
-                  {new Date(event.end).toLocaleDateString('es-ES', { 
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric' 
-                  })}
+                  {(() => {
+                    const [year, month, day] = event.end.split('-').map(Number);
+                    return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric' 
+                    });
+                  })()}
                 </p>
               </div>
             )}
