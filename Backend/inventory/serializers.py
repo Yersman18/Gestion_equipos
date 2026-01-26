@@ -95,17 +95,29 @@ class MantenimientoSerializer(serializers.ModelSerializer):
 
 
 class PerifericoSerializer(serializers.ModelSerializer):
-    usuario_asignado_username = serializers.CharField(source='usuario_asignado.username', read_only=True, allow_null=True)
+    empleado_asignado_info = serializers.SerializerMethodField()
     equipo_asociado_serial = serializers.CharField(source='equipo_asociado.serial', read_only=True, allow_null=True)
 
     class Meta:
         model = Periferico
         fields = [
             'id', 'nombre', 'tipo', 'estado_tecnico', 'estado_disponibilidad',
-            'usuario_asignado', 'usuario_asignado_username', 'equipo_asociado',
+            'empleado_asignado', 'empleado_asignado_info', 'equipo_asociado',
             'equipo_asociado_serial', 'fecha_entrega', 'notas'
         ]
-        read_only_fields = ['usuario_asignado_username', 'equipo_asociado_serial']
+        read_only_fields = ['empleado_asignado_info', 'equipo_asociado_serial']
+
+    def get_empleado_asignado_info(self, obj):
+        if obj.empleado_asignado:
+            return {
+                'id': obj.empleado_asignado.id,
+                'nombre': obj.empleado_asignado.nombre,
+                'apellido': obj.empleado_asignado.apellido,
+                'nombre_completo': f"{obj.empleado_asignado.nombre} {obj.empleado_asignado.apellido}",
+                'cargo': obj.empleado_asignado.cargo,
+                'area': obj.empleado_asignado.area,
+            }
+        return None
 
 class LicenciaSerializer(serializers.ModelSerializer):
     equipo_asociado_serial = serializers.CharField(source='equipo_asociado.serial', read_only=True)
