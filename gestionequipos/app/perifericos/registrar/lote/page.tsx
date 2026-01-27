@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchAuthenticated } from '@/app/utils/api';
-import { EmpleadoSelector } from '@/components/EmpleadoSelector';
 
 const TIPO_PERIFERICO_CHOICES = [
     { value: 'Mouse', label: 'Mouse' },
@@ -19,46 +18,55 @@ const ESTADO_TECNICO_CHOICES = [
     { value: 'Dañado', label: 'Dañado' },
 ];
 
-const RegistrarPerifericoPage = () => {
+const RegistrarPerifericosEnLotePage = () => {
     const router = useRouter();
-    const [nombre, setNombre] = useState('');
+    const [nombreBase, setNombreBase] = useState('');
+    const [cantidad, setCantidad] = useState(1);
     const [tipo, setTipo] = useState('Mouse');
     const [estadoTecnico, setEstadoTecnico] = useState('Funcional');
     const [notas, setNotas] = useState('');
-    const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | ''>('');
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setSubmitting(true);
         setError(null);
+        setSuccessMessage(null);
 
-        const peripheralData: any = {
-            nombre,
-            tipo,
-            estado_tecnico: estadoTecnico,
-            notas,
-            estado_disponibilidad: selectedEmpleadoId ? 'Asignado' : 'Disponible',
-        };
+        if (cantidad <= 0) {
+            setError("La cantidad debe ser mayor que cero.");
+            setSubmitting(false);
+            return;
+        }
 
-        if (selectedEmpleadoId) {
-            peripheralData.empleado_asignado = selectedEmpleadoId;
+        const requests = [];
+        for (let i = 1; i <= cantidad; i++) {
+            const peripheralData = {
+                nombre: `${nombreBase} - ${i}`,
+                tipo,
+                estado_tecnico: estadoTecnico,
+                notas,
+                estado_disponibilidad: 'Disponible',
+            };
+            requests.push(fetchAuthenticated('/api/perifericos/', {
+                method: 'POST',
+                body: JSON.stringify(peripheralData),
+            }));
         }
 
         try {
-            await fetchAuthenticated('/api/perifericos/', {
-                method: 'POST',
-                body: JSON.stringify(peripheralData),
-            });
-
-            router.push('/perifericos');
-
+            await Promise.all(requests);
+            setSuccessMessage(`¡${cantidad} periféricos registrados exitosamente! Redirigiendo...`);
+            setTimeout(() => {
+                router.push('/perifericos');
+            }, 2000);
         } catch (err) {
             if (err instanceof Error) {
-                setError(err.message);
+                setError(`Error al registrar los periféricos: ${err.message}`);
             } else {
-                setError('Ocurrió un error desconocido');
+                setError('Ocurrió un error desconocido durante el registro en lote.');
             }
         } finally {
             setSubmitting(false);
@@ -67,19 +75,34 @@ const RegistrarPerifericoPage = () => {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-6">Registrar Nuevo Periférico</h1>
+            <h1 className="text-3xl font-bold mb-6">Registrar Periféricos en Lote</h1>
             
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-                {error && <div className="mb-4 text-red-500">{error}</div>}
+                {error && <div className="mb-4 text-red-500 bg-red-100 p-3 rounded">{error}</div>}
+                {successMessage && <div className="mb-4 text-green-700 bg-green-100 p-3 rounded">{successMessage}</div>}
 
                 <div className="mb-4">
-                    <label htmlFor="nombre" className="block text-gray-700 font-bold mb-2">Nombre</label>
+                    <label htmlFor="nombreBase" className="block text-gray-700 font-bold mb-2">Nombre Base</label>
                     <input
                         type="text"
-                        id="nombre"
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
+                        id="nombreBase"
+                        value={nombreBase}
+                        onChange={(e) => setNombreBase(e.target.value)}
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        placeholder="Ej: Mouse Dell USB"
+                        required
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label htmlFor="cantidad" className="block text-gray-700 font-bold mb-2">Cantidad</label>
+                    <input
+                        type="number"
+                        id="cantidad"
+                        value={cantidad}
+                        onChange={(e) => setCantidad(Number(e.target.value))}
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        min="1"
                         required
                     />
                 </div>
@@ -90,7 +113,7 @@ const RegistrarPerifericoPage = () => {
                         id="tipo"
                         value={tipo}
                         onChange={(e) => setTipo(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
                     >
                         {TIPO_PERIFERICO_CHOICES.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>
@@ -104,7 +127,7 @@ const RegistrarPerifericoPage = () => {
                         id="estadoTecnico"
                         value={estadoTecnico}
                         onChange={(e) => setEstadoTecnico(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
                     >
                         {ESTADO_TECNICO_CHOICES.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>
@@ -112,37 +135,30 @@ const RegistrarPerifericoPage = () => {
                     </select>
                 </div>
 
-                <div className="mb-4">
-                    <EmpleadoSelector
-                        selectedEmpleadoId={selectedEmpleadoId}
-                        onSelectEmpleado={setSelectedEmpleadoId}
-                        onEmpleadoChange={() => {}} // No necesitamos hacer nada aquí para el registro
-                    />
-                </div>
-
                 <div className="mb-6">
-                    <label htmlFor="notas" className="block text-gray-700 font-bold mb-2">Notas</label>
+                    <label htmlFor="notas" className="block text-gray-700 font-bold mb-2">Notas (Opcional)</label>
                     <textarea
                         id="notas"
                         value={notas}
                         onChange={(e) => setNotas(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        rows={4}
+                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+                        rows={3}
+                        placeholder="Notas comunes para todo el lote"
                     />
                 </div>
 
                 <div className="flex items-center justify-between">
                     <button
                         type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                         disabled={submitting}
                     >
-                        {submitting ? 'Registrando...' : 'Registrar'}
+                        {submitting ? `Registrando ${cantidad} periféricos...` : 'Registrar Lote'}
                     </button>
                     <button
                         type="button"
-                        onClick={() => router.back()}
-                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        onClick={() => router.push('/perifericos')}
+                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
                     >
                         Cancelar
                     </button>
@@ -152,4 +168,4 @@ const RegistrarPerifericoPage = () => {
     );
 };
 
-export default RegistrarPerifericoPage;
+export default RegistrarPerifericosEnLotePage;

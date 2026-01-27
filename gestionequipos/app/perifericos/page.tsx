@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { fetchAuthenticated } from '@/app/utils/api'; // Importar la función centralizada
 
 interface Periferico {
   id: number;
@@ -17,15 +18,12 @@ const PerifericosPage = () => {
   const [perifericos, setPerifericos] = useState<Periferico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchPerifericos = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/perifericos/');
-        if (!response.ok) {
-          throw new Error('Error al obtener los periféricos');
-        }
-        const data = await response.json();
+        const data = await fetchAuthenticated('/api/perifericos/');
         setPerifericos(data);
       } catch (err) {
         if (err instanceof Error) {
@@ -41,6 +39,28 @@ const PerifericosPage = () => {
     fetchPerifericos();
   }, []);
 
+  const handleDelete = async (id: number) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este periférico?')) {
+      try {
+        await fetchAuthenticated(`/api/perifericos/${id}/`, {
+          method: 'DELETE',
+        });
+        // Actualizar el estado para remover el periférico eliminado
+        setPerifericos(perifericos.filter(p => p.id !== id));
+      } catch (err) {
+        if (err instanceof Error) {
+            alert(`Error al eliminar: ${err.message}`);
+        } else {
+            alert('Ocurrió un error desconocido al eliminar.');
+        }
+      }
+    }
+  };
+
+  const filteredPerifericos = perifericos.filter(periferico =>
+    periferico.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return <div>Cargando periféricos...</div>;
   }
@@ -53,11 +73,24 @@ const PerifericosPage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Gestión de Periféricos</h1>
-        <Link href="/perifericos/registrar" legacyBehavior>
-          <a className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <div className="flex gap-4">
+          <Link href="/perifericos/registrar" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
             Registrar Periférico
-          </a>
-        </Link>
+          </Link>
+          <Link href="/perifericos/registrar/lote" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Registrar en Lote
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          className="w-full px-4 py-2 border rounded-lg"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       <div className="overflow-x-auto bg-white rounded-lg shadow">
@@ -83,7 +116,7 @@ const PerifericosPage = () => {
             </tr>
           </thead>
           <tbody>
-            {perifericos.map((periferico) => (
+            {filteredPerifericos.map((periferico) => (
               <tr key={periferico.id}>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                   <p className="text-gray-900 whitespace-no-wrap">{periferico.nombre}</p>
@@ -135,9 +168,15 @@ const PerifericosPage = () => {
                   </p>
                 </td>
                 <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right">
-                  <Link href={`/perifericos/editar/${periferico.id}`} legacyBehavior>
-                    <a className="text-indigo-600 hover:text-indigo-900">Editar</a>
+                  <Link href={`/perifericos/editar/${periferico.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                    Editar
                   </Link>
+                  <button
+                    onClick={() => handleDelete(periferico.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Eliminar
+                  </button>
                 </td>
               </tr>
             ))}

@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
 
+import { fetchAuthenticated } from '@/app/utils/api';
+
 interface Empleado {
   id: number;
   nombre: string;
@@ -23,7 +25,7 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEmpleados, setFilteredEmpleados] = useState<Empleado[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,15 +38,7 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
 
     const fetchEmpleados = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/empleados/`, {
-          headers: { 'Authorization': `Token ${token}` },
-        });
-
-        if (!response.ok) {
-          throw new Error('No se pudieron cargar los empleados.');
-        }
-
-        const data: Empleado[] = await response.json();
+        const data: Empleado[] = await fetchAuthenticated('/api/empleados/');
         setEmpleados(data);
       } catch (err) {
         console.error("Error fetching employees:", err);
@@ -52,7 +46,7 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
     };
 
     fetchEmpleados();
-  }, [isAuthenticated, isAuthLoading, token]);
+  }, [isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -94,25 +88,48 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
     setIsDropdownOpen(false);
   };
 
+  const handleClear = () => {
+    onSelectEmpleado('');
+    onEmpleadoChange(null);
+    setIsDropdownOpen(false);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
-      <label htmlFor="empleadoSearch" className="block text-sm font-bold text-gray-700">
-        👥 Seleccionar Colaborador
+      <label htmlFor="empleadoSearch" className="block text-sm font-bold text-gray-700 mb-1">
+        👥 Asignar a Colaborador
       </label>
-      <input
-        type="text"
-        id="empleadoSearch"
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          setIsDropdownOpen(true);
-          onSelectEmpleado(''); // Clear selected empleado when searching
-          onEmpleadoChange(null);
-        }}
-        onFocus={() => setIsDropdownOpen(true)}
-        placeholder="Escribe para buscar un colaborador..."
-        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
-      />
+      <div className="relative">
+        <input
+          type="text"
+          id="empleadoSearch"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsDropdownOpen(true);
+            if (selectedEmpleadoId) {
+              onSelectEmpleado(''); 
+              onEmpleadoChange(null);
+            }
+          }}
+          onFocus={() => setIsDropdownOpen(true)}
+          placeholder="Buscar por nombre, apellido o cédula..."
+          className="w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+          autoComplete="off"
+        />
+        {selectedEmpleadoId && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            aria-label="Limpiar selección"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
       {isDropdownOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {filteredEmpleados.length > 0 ? (
