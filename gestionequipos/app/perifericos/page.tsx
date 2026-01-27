@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Layout } from '@/components/Layout';
-import { fetchAuthenticated } from '@/app/utils/api'; // Importar la función centralizada
+import { fetchAuthenticated } from '@/app/utils/api';
 
 interface Periferico {
   id: number;
@@ -46,7 +46,6 @@ const PerifericosPage = () => {
         await fetchAuthenticated(`/api/perifericos/${id}/`, {
           method: 'DELETE',
         });
-        // Actualizar el estado para remover el periférico eliminado
         setPerifericos(perifericos.filter(p => p.id !== id));
       } catch (err) {
         if (err instanceof Error) {
@@ -63,128 +62,158 @@ const PerifericosPage = () => {
   );
 
   if (loading) {
-    return <Layout><div>Cargando periféricos...</div></Layout>;
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Cargando periféricos...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   if (error) {
-    return <Layout><div>Error: {error}</div></Layout>;
+    return (
+      <Layout>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 shadow-sm">
+            <p className="text-red-800 font-medium">Error: {error}</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Gestión de Periféricos</h1>
-          <div className="flex gap-4">
-            <Link href="/perifericos/registrar" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestión de Periféricos</h1>
+            <p className="text-gray-500 text-sm">
+              Mostrando {filteredPerifericos.length} de {perifericos.length} periféricos
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Link 
+              href="/perifericos/registrar" 
+              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
+            >
               Registrar Periférico
             </Link>
-            <Link href="/perifericos/registrar/lote" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            <Link 
+              href="/perifericos/registrar/lote" 
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
+            >
               Registrar en Lote
             </Link>
           </div>
         </div>
 
-        <div className="mb-4">
+        {/* Search Bar */}
+        <div className="mb-6">
           <input
             type="text"
             placeholder="Buscar por nombre..."
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="min-w-full leading-normal">
-            <thead>
-              <tr>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Nombre
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Estado Técnico
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Disponibilidad
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Asignado a
-                </th>
-                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPerifericos.map((periferico) => (
-                <tr key={periferico.id}>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{periferico.nombre}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{periferico.tipo}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <span
-                      className={`relative inline-block px-3 py-1 font-semibold leading-tight ${
-                        periferico.estado_tecnico === 'Funcional'
-                          ? 'text-green-900'
-                          : 'text-red-900'
+        {/* Table Rows */}
+        <div className="space-y-4">
+          {filteredPerifericos.map((periferico) => (
+            <div 
+              key={periferico.id}
+              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
+            >
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-5 gap-4">
+                {/* Left Section - Main Info */}
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold text-gray-800">{periferico.nombre}</h3>
+                    <span className="text-gray-500 text-sm font-medium px-3 py-1 bg-gray-100 rounded">{periferico.tipo}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-gray-600 text-sm">
+                      {periferico.empleado_asignado_info?.nombre_completo || (
+                        <span className="italic text-gray-400">Sin asignar</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Middle Section - Status Badges */}
+                <div className="flex flex-wrap gap-4 items-center">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-gray-500 text-xs font-medium">Estado técnico</span>
+                    <span 
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        periferico.estado_tecnico === 'Funcional' 
+                          ? 'bg-green-100 text-green-700'
+                          : periferico.estado_tecnico === 'Nuevo'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-orange-100 text-orange-700'
                       }`}
                     >
-                      <span
-                        aria-hidden
-                        className={`absolute inset-0 ${
-                          periferico.estado_tecnico === 'Funcional'
-                            ? 'bg-green-200'
-                            : 'bg-red-200'
-                        } opacity-50 rounded-full`}
-                      ></span>
-                      <span className="relative">{periferico.estado_tecnico}</span>
+                      {periferico.estado_tecnico}
                     </span>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                  <span
-                      className={`relative inline-block px-3 py-1 font-semibold leading-tight ${
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-gray-500 text-xs font-medium">Disponibilidad</span>
+                    <span 
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         periferico.estado_disponibilidad === 'Disponible'
-                          ? 'text-blue-900'
-                          : 'text-yellow-900'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-yellow-100 text-yellow-700'
                       }`}
                     >
-                      <span
-                        aria-hidden
-                        className={`absolute inset-0 ${
-                          periferico.estado_disponibilidad === 'Disponible'
-                            ? 'bg-blue-200'
-                            : 'bg-yellow-200'
-                        } opacity-50 rounded-full`}
-                      ></span>
-                      <span className="relative">{periferico.estado_disponibilidad}</span>
+                      {periferico.estado_disponibilidad}
                     </span>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">
-                      {periferico.empleado_asignado_info?.nombre_completo || 'No asignado'}
-                    </p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-right">
-                    <Link href={`/perifericos/editar/${periferico.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                      Editar
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(periferico.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+
+                {/* Right Section - Actions */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleDelete(periferico.id)}
+                    className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm shadow-sm"
+                  >
+                    Dar de Baja
+                  </button>
+                  <Link 
+                    href={`/perifericos/editar/${periferico.id}`}
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm shadow-sm inline-block"
+                  >
+                    Editar
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        {/* Empty State */}
+        {filteredPerifericos.length === 0 && (
+          <div className="text-center py-16 bg-white rounded-lg border border-gray-100 shadow-sm">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No se encontraron periféricos</h3>
+            <p className="text-gray-500">Intenta con otro término de búsqueda</p>
+          </div>
+        )}
       </div>
     </Layout>
   );
