@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 import { EmpleadoSelector } from '@/components/EmpleadoSelector';
 
@@ -66,89 +67,91 @@ const RegistrarPerifericoPage = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-6">Registrar Nuevo Periférico</h1>
-            
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-                {error && <div className="mb-4 text-red-500">{error}</div>}
+        <Layout>
+            <div className="container mx-auto px-4 py-8">
+                <h1 className="text-3xl font-bold mb-6">Registrar Nuevo Periférico</h1>
+                
+                <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
+                    {error && <div className="mb-4 text-red-500">{error}</div>}
 
-                <div className="mb-4">
-                    <label htmlFor="nombre" className="block text-gray-700 font-bold mb-2">Nombre</label>
-                    <input
-                        type="text"
-                        id="nombre"
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        required
-                    />
-                </div>
+                    <div className="mb-4">
+                        <label htmlFor="nombre" className="block text-gray-700 font-bold mb-2">Nombre</label>
+                        <input
+                            type="text"
+                            id="nombre"
+                            value={nombre}
+                            onChange={(e) => setNombre(e.target.value)}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            required
+                        />
+                    </div>
 
-                <div className="mb-4">
-                    <label htmlFor="tipo" className="block text-gray-700 font-bold mb-2">Tipo de Periférico</label>
-                    <select
-                        id="tipo"
-                        value={tipo}
-                        onChange={(e) => setTipo(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    >
-                        {TIPO_PERIFERICO_CHOICES.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                </div>
+                    <div className="mb-4">
+                        <label htmlFor="tipo" className="block text-gray-700 font-bold mb-2">Tipo de Periférico</label>
+                        <select
+                            id="tipo"
+                            value={tipo}
+                            onChange={(e) => setTipo(e.target.value)}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        >
+                            {TIPO_PERIFERICO_CHOICES.map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="mb-4">
-                    <label htmlFor="estadoTecnico" className="block text-gray-700 font-bold mb-2">Estado Técnico</label>
-                    <select
-                        id="estadoTecnico"
-                        value={estadoTecnico}
-                        onChange={(e) => setEstadoTecnico(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    >
-                        {ESTADO_TECNICO_CHOICES.map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                </div>
+                    <div className="mb-4">
+                        <label htmlFor="estadoTecnico" className="block text-gray-700 font-bold mb-2">Estado Técnico</label>
+                        <select
+                            id="estadoTecnico"
+                            value={estadoTecnico}
+                            onChange={(e) => setEstadoTecnico(e.target.value)}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        >
+                            {ESTADO_TECNICO_CHOICES.map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="mb-4">
-                    <EmpleadoSelector
-                        selectedEmpleadoId={selectedEmpleadoId}
-                        onSelectEmpleado={setSelectedEmpleadoId}
-                        onEmpleadoChange={() => {}} // No necesitamos hacer nada aquí para el registro
-                    />
-                </div>
+                    <div className="mb-4">
+                        <EmpleadoSelector
+                            selectedEmpleadoId={selectedEmpleadoId}
+                            onSelectEmpleado={setSelectedEmpleadoId}
+                            onEmpleadoChange={() => {}} // No necesitamos hacer nada aquí para el registro
+                        />
+                    </div>
 
-                <div className="mb-6">
-                    <label htmlFor="notas" className="block text-gray-700 font-bold mb-2">Notas</label>
-                    <textarea
-                        id="notas"
-                        value={notas}
-                        onChange={(e) => setNotas(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        rows={4}
-                    />
-                </div>
+                    <div className="mb-6">
+                        <label htmlFor="notas" className="block text-gray-700 font-bold mb-2">Notas</label>
+                        <textarea
+                            id="notas"
+                            value={notas}
+                            onChange={(e) => setNotas(e.target.value)}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            rows={4}
+                        />
+                    </div>
 
-                <div className="flex items-center justify-between">
-                    <button
-                        type="submit"
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        disabled={submitting}
-                    >
-                        {submitting ? 'Registrando...' : 'Registrar'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => router.back()}
-                        className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    >
-                        Cancelar
-                    </button>
-                </div>
-            </form>
-        </div>
+                    <div className="flex items-center justify-between">
+                        <button
+                            type="submit"
+                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            disabled={submitting}
+                        >
+                            {submitting ? 'Registrando...' : 'Registrar'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Layout>
     );
 };
 
