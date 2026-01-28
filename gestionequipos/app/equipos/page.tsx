@@ -28,6 +28,12 @@ interface Equipo {
     tiene_user: boolean;
     user_id: number | null;
   };
+  total_mantenimientos?: number;
+  diagnostico_salud?: {
+    rango: string;
+    color: string;
+    mensaje: string;
+  };
 }
 
 export default function EquiposPage() {
@@ -53,14 +59,15 @@ export default function EquiposPage() {
       setError(null);
 
       const params = new URLSearchParams();
-      if (!user?.is_superuser) {
-        if (isSedeLoading) return;
-        if (!sedeActiva) {
+      if (sedeActiva) {
+        params.append('sede', String(sedeActiva.id));
+      } else if (!user?.is_superuser) {
+        // Si no es superuser y no hay sede seleccionada (y no está cargando), no mostramos nada
+        if (!isSedeLoading) {
           setEquipos([]);
           setIsLoadingData(false);
           return;
         }
-        params.append('sede', String(sedeActiva.id));
       }
 
       const apiUrl = `/api/equipos/?${params.toString()}`;
@@ -239,6 +246,29 @@ export default function EquiposPage() {
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getDisponibilidadBadge(equipo.estado_disponibilidad)}`}>
                     {equipo.estado_disponibilidad}
                   </span>
+                </div>
+              </div>
+
+              {/* Salud Técnica */}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-gray-500 font-bold uppercase tracking-tighter">Salud Técnica:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${equipo.diagnostico_salud?.color === 'green' ? 'bg-emerald-500' :
+                        equipo.diagnostico_salud?.color === 'yellow' ? 'bg-amber-500' : 'bg-red-500'
+                      }`}></span>
+                    <span className={`text-[10px] font-black uppercase ${equipo.diagnostico_salud?.color === 'green' ? 'text-emerald-700' :
+                        equipo.diagnostico_salud?.color === 'yellow' ? 'text-amber-700' : 'text-red-700'
+                      }`}>
+                      {equipo.diagnostico_salud?.rango}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400 font-medium">Historial: {equipo.total_mantenimientos} mantenimientos</span>
+                  {equipo.diagnostico_salud?.color === 'red' && (
+                    <span className="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded border border-red-100 font-bold animate-bounce">⚠️ REEMPLAZO SUGERIDO</span>
+                  )}
                 </div>
               </div>
 

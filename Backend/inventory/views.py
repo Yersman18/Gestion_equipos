@@ -209,18 +209,26 @@ class PerifericoListCreateAPIView(generics.ListCreateAPIView):
         if not user.is_authenticated:
             return Periferico.objects.none()
 
+        is_admin = False
+        user_profile = None
         try:
             user_profile = user.profile
             if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
-                return Periferico.objects.all()
+                is_admin = True
         except UserProfile.DoesNotExist:
             if user.is_staff or user.is_superuser:
-                return Periferico.objects.all()
-            return Periferico.objects.none()
+                is_admin = True
 
-        if hasattr(user_profile, 'sede') and user_profile.sede:
-            # Filtra los periféricos para mostrar solo aquellos asociados a equipos de la sede del usuario.
-            return Periferico.objects.filter(equipo_asociado__sede=user_profile.sede)
+        queryset = Periferico.objects.all()
+
+        if is_admin:
+            sede_id = self.request.query_params.get('sede')
+            if sede_id:
+                queryset = queryset.filter(equipo_asociado__sede_id=sede_id)
+            return queryset
+        
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            return queryset.filter(equipo_asociado__sede=user_profile.sede)
 
         return Periferico.objects.none()
 
@@ -231,9 +239,36 @@ class PerifericoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIVi
 
 # Vistas para el modelo Licencia
 class LicenciaListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Licencia.objects.all()
     serializer_class = LicenciaSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Licencia.objects.none()
+
+        is_admin = False
+        user_profile = None
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                is_admin = True
+
+        queryset = Licencia.objects.all()
+
+        if is_admin:
+            sede_id = self.request.query_params.get('sede')
+            if sede_id:
+                queryset = queryset.filter(equipo_asociado__sede_id=sede_id)
+            return queryset
+        
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            return queryset.filter(equipo_asociado__sede=user_profile.sede)
+
+        return Licencia.objects.none()
 
 class LicenciaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Licencia.objects.all()
@@ -314,17 +349,24 @@ class DashboardStatsView(APIView):
             if user_sede:
                 equipos_qs = equipos_qs.filter(sede=user_sede)
                 mantenimientos_qs = mantenimientos_qs.filter(sede=user_sede)
-                perifericos_qs = perifericos_qs.filter(equipo_asociado__sede=user_sede) # Lógica corregida
+                perifericos_qs = perifericos_qs.filter(equipo_asociado__sede=user_sede)
                 licencias_qs = licencias_qs.filter(equipo_asociado__sede=user_sede)
                 usuarios_qs = usuarios_qs.filter(profile__sede=user_sede)
             else:
-                # Si el usuario no tiene sede, no debe ver datos
-                equipos_qs = Equipo.objects.none()
-                mantenimientos_qs = Mantenimiento.objects.none()
-                perifericos_qs = Periferico.objects.none()
-                licencias_qs = Licencia.objects.none()
-                # Aún puede verse a sí mismo en el conteo de usuarios si se decidiera así
-                usuarios_qs = User.objects.filter(pk=user.pk)
+                return Response({"detail": "Usuario sin sede asignada."}, status=403)
+        else:
+            # Si es admin, puede opcionalmente filtrar por sede_id en la URL
+            sede_id = request.query_params.get('sede_id')
+            if sede_id:
+                try:
+                    target_sede = Sede.objects.get(id=sede_id)
+                    equipos_qs = equipos_qs.filter(sede=target_sede)
+                    mantenimientos_qs = mantenimientos_qs.filter(sede=target_sede)
+                    perifericos_qs = perifericos_qs.filter(equipo_asociado__sede=target_sede)
+                    licencias_qs = licencias_qs.filter(equipo_asociado__sede=target_sede)
+                    usuarios_qs = usuarios_qs.filter(profile__sede=target_sede)
+                except Sede.DoesNotExist:
+                    pass
         
         # QuerySet de equipos activos para la mayoría de las estadísticas
         equipos_activos_qs = equipos_qs.filter(activo=True)
@@ -347,11 +389,29 @@ class DashboardStatsView(APIView):
             estado_mantenimiento__in=['Pendiente', 'En proceso']
         ).count()
 
-        # Para los próximos mantenimientos, usamos el queryset ya filtrado por sede y estado 'Pendiente'
+        # Mantenimientos VENCIDOS: Estado Pendiente y fecha_inicio < hoy
+        today = timezone.now().date()
+        mantenimientos_vencidos = mantenimientos_qs.filter(
+            estado_mantenimiento='Pendiente',
+            fecha_inicio__lt=today
+        ).count()
+
+        # Para los próximos mantenimientos (próximos 30 días)
         proximos_mantenimientos = mantenimientos_qs.filter(
             estado_mantenimiento='Pendiente',
-            fecha_inicio__gte=timezone.now(),
-            fecha_inicio__lte=timezone.now() + timedelta(days=30)
+            fecha_inicio__gte=today,
+            fecha_inicio__lte=today + timedelta(days=30)
+        ).count()
+
+        # Licencias vencidas
+        licencias_vencidas = licencias_qs.filter(
+            Q(estado='Vencida') | Q(fecha_vencimiento__lt=today)
+        ).distinct().count()
+
+        # Licencias por vencer (próximos 30 días)
+        licencias_por_vencer = licencias_qs.filter(
+            fecha_vencimiento__gte=today,
+            fecha_vencimiento__lte=today + timedelta(days=30)
         ).count()
 
         stats = {
@@ -363,6 +423,9 @@ class DashboardStatsView(APIView):
             'total_usuarios': total_usuarios,
             'proximos_mantenimientos': proximos_mantenimientos,
             'mantenimientos_activos': mantenimientos_activos,
+            'mantenimientos_vencidos': mantenimientos_vencidos,
+            'licencias_vencidas': licencias_vencidas,
+            'licencias_por_vencer': licencias_por_vencer,
             'equipos_por_estado': list(equipos_por_estado),
             'equipos_por_disponibilidad': list(equipos_por_disponibilidad),
             'mantenimientos_por_estado': list(mantenimientos_por_estado),

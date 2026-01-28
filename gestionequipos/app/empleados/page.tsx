@@ -14,12 +14,15 @@ interface Empleado {
   area?: string;
 }
 
+import { useSede } from '@/app/context/SedeContext';
+
 export default function EmpleadosPage() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { sedeActiva, isLoading: isSedeLoading } = useSede();
 
   const handleDelete = async (id: number) => {
     if (!token) {
@@ -50,7 +53,7 @@ export default function EmpleadosPage() {
   };
 
   useEffect(() => {
-    if (isAuthLoading) return;
+    if (isAuthLoading || isSedeLoading) return;
 
     if (!isAuthenticated) {
       router.push('/login');
@@ -60,7 +63,8 @@ export default function EmpleadosPage() {
     const fetchEmpleados = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/empleados/`, {
+        const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : '';
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/empleados/${queryParams}`, {
           headers: {
             'Authorization': `Token ${token}`,
           },
@@ -80,7 +84,7 @@ export default function EmpleadosPage() {
     };
 
     fetchEmpleados();
-  }, [isAuthenticated, isAuthLoading, router, token]);
+  }, [isAuthenticated, isAuthLoading, isSedeLoading, sedeActiva, router, token]);
 
   if (isLoading) {
     return (

@@ -15,7 +15,10 @@ interface Periferico {
   };
 }
 
+import { useSede } from '@/app/context/SedeContext';
+
 const PerifericosPage = () => {
+  const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const [perifericos, setPerifericos] = useState<Periferico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +26,10 @@ const PerifericosPage = () => {
 
   useEffect(() => {
     const fetchPerifericos = async () => {
+      setLoading(true);
       try {
-        const data = await fetchAuthenticated('/api/perifericos/');
+        const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : '';
+        const data = await fetchAuthenticated(`/api/perifericos/${queryParams}`);
         setPerifericos(data);
       } catch (err) {
         if (err instanceof Error) {
@@ -37,8 +42,10 @@ const PerifericosPage = () => {
       }
     };
 
-    fetchPerifericos();
-  }, []);
+    if (!isSedeLoading) {
+      fetchPerifericos();
+    }
+  }, [sedeActiva, isSedeLoading]);
 
   const handleReturn = async (periferico: Periferico) => {
     if (window.confirm(`¿Confirmar devolución de ${periferico.nombre}? Quedará disponible en inventario.`)) {

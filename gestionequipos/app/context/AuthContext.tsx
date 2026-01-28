@@ -14,13 +14,14 @@ interface Sede {
 
 // Información del usuario que guardaremos
 export interface User {
-  user_id: number; // Coincide con la respuesta de la API
+  user_id: number;
   username: string;
   email: string;
   is_superuser: boolean;
-  sede: Sede | null; // El usuario puede o no tener una sede asignada
+  rol: string | null;
+  sede: Sede | null;
+  sedes_autorizadas?: Sede[];
 }
-
 // Lo que nuestro contexto va a proveer
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -63,14 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = (apiResponse: any, authToken: string) => {
+  const login = (userDataFromApi: any, authToken: string) => {
     // Transformamos la respuesta de la API a nuestro objeto User
     const userData: User = {
-      user_id: apiResponse.user_id,
-      username: apiResponse.username,
-      email: apiResponse.email,
-      is_superuser: apiResponse.is_superuser,
-      sede: apiResponse.sede && apiResponse.sede.id ? apiResponse.sede : null
+      user_id: userDataFromApi.id,
+      username: userDataFromApi.username,
+      email: userDataFromApi.email,
+      is_superuser: userDataFromApi.is_superuser,
+      rol: userDataFromApi.rol || null,
+      sede: userDataFromApi.sede && userDataFromApi.sede.id ? userDataFromApi.sede : null,
+      sedes_autorizadas: userDataFromApi.sedes_autorizadas || []
     };
 
     // Guardamos los datos en el estado y en localStorage

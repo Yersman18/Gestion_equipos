@@ -228,14 +228,14 @@ const HistorialMantenimientosPage: React.FC = () => {
           {/* Rango de Fechas */}
           <div className="lg:col-span-2">
             <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Rango de Fechas (Inicio)</label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row gap-2 md:items-center w-full">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
               />
-              <span className="text-gray-400">al</span>
+              <span className="hidden md:block text-gray-400">al</span>
               <input
                 type="date"
                 value={endDate}
@@ -279,8 +279,8 @@ const HistorialMantenimientosPage: React.FC = () => {
               {/* Header - Estilo Formal */}
               <div className="bg-gray-50 p-5 border-b border-gray-100 flex items-start justify-between relative overflow-hidden">
                 <div className={`absolute top-0 left-0 w-1.5 h-full ${m.estado_mantenimiento === 'Finalizado' ? 'bg-emerald-500' :
-                    m.estado_mantenimiento === 'Pendiente' ? 'bg-amber-500' :
-                      m.estado_mantenimiento === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'
+                  m.estado_mantenimiento === 'Pendiente' ? 'bg-amber-500' :
+                    m.estado_mantenimiento === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'
                   }`}></div>
                 <div className="flex-1 pl-2">
                   <h3 className="text-gray-900 font-bold text-lg leading-tight uppercase tracking-tight">{m.equipo_asociado_nombre}</h3>

@@ -103,8 +103,8 @@ const GenerarPasisalvoPage = () => {
         const pageWidth = doc.internal.pageSize.getWidth();
 
         // --- ESTILOS Y COLORES ---
-        // Verde fluorescente pálido / aguamarina corporativo
-        const primaryColor: [number, number, number] = [34, 197, 94]; // Un verde vibrante y profesional
+        // Verde más oscuro y profesional (Forest/Emerald Dark) en lugar de fluorescente
+        const primaryColor: [number, number, number] = [21, 128, 61];
 
         const generateWithLogo = () => {
             const logo = new Image();
@@ -345,7 +345,12 @@ const GenerarPasisalvoPage = () => {
                                 </button>
                                 <button
                                     onClick={generatePDF}
-                                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-black py-4 px-12 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center gap-3"
+                                    disabled={!statusInfo?.esta_a_paz_y_salvo}
+                                    className={`font-black py-4 px-12 rounded-2xl shadow-xl transition-all duration-300 flex items-center gap-3 ${statusInfo?.esta_a_paz_y_salvo
+                                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white hover:shadow-2xl hover:-translate-y-1'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                        }`}
+                                    title={!statusInfo?.esta_a_paz_y_salvo ? "No se puede generar: El colaborador tiene activos pendientes" : ""}
                                 >
                                     <span className="text-2xl">📥</span>
                                     Generar PDF de Paz y Salvo

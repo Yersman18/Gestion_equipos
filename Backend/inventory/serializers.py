@@ -22,6 +22,9 @@ class EquipoSerializer(serializers.ModelSerializer):
     # Campo para aceptar el ID del usuario al crear/actualizar un equipo (solo escritura).
     usuario_asignado_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
+    total_mantenimientos = serializers.SerializerMethodField()
+    diagnostico_salud = serializers.SerializerMethodField()
+
     class Meta:
         model = Equipo
         fields = [
@@ -34,9 +37,22 @@ class EquipoSerializer(serializers.ModelSerializer):
             'responsable_entrega', 'nombre_jefe', 'cargo_jefe', 
             'firma_recibido_usuario', 'firma_recibido_jefe', 'firma_compromiso',
             'fecha_ultimo_mantenimiento', 'fecha_proximo_mantenimiento',
+            'total_mantenimientos', 'diagnostico_salud',
             'notas'
         ]
-        read_only_fields = ['sede_nombre', 'usuario_asignado', 'empleado_asignado_info']
+        read_only_fields = ['sede_nombre', 'usuario_asignado', 'empleado_asignado_info', 'total_mantenimientos', 'diagnostico_salud']
+
+    def get_total_mantenimientos(self, obj):
+        return obj.historial_mantenimientos.filter(estado_mantenimiento='Finalizado').count()
+
+    def get_diagnostico_salud(self, obj):
+        count = obj.historial_mantenimientos.filter(estado_mantenimiento='Finalizado').count()
+        if count <= 3:
+            return {'rango': 'Óptimo', 'color': 'green', 'mensaje': 'Equipo en excelente estado técnico.'}
+        elif count <= 6:
+            return {'rango': 'Advertencia', 'color': 'yellow', 'mensaje': 'Uso frecuente detectado. Requiere monitoreo preventivo.'}
+        else:
+            return {'rango': 'Crítico', 'color': 'red', 'mensaje': '¡Riesgo alto! Alta tasa de fallos. Evaluar reemplazo preventivo.'}
 
     def get_usuario_asignado(self, obj):
         if obj.empleado_asignado and obj.empleado_asignado.user:
@@ -120,15 +136,24 @@ class PerifericoSerializer(serializers.ModelSerializer):
         return None
 
 class LicenciaSerializer(serializers.ModelSerializer):
-    equipo_asociado_serial = serializers.CharField(source='equipo_asociado.serial', read_only=True)
+    equipo_asociado_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Licencia
         fields = [
-            'id', 'equipo_asociado', 'equipo_asociado_serial', 'tipo_licencia',
-            'tipo_activacion', 'clave', 'fecha_instalacion', 'estado', 'notas'
+            'id', 'equipo_asociado', 'equipo_asociado_info', 'tipo_licencia',
+            'tipo_activacion', 'clave', 'fecha_instalacion', 'fecha_vencimiento', 'estado', 'notas'
         ]
-        read_only_fields = ['equipo_asociado_serial']
+        read_only_fields = ['equipo_asociado_info']
+
+    def get_equipo_asociado_info(self, obj):
+        if obj.equipo_asociado:
+            return {
+                'id': obj.equipo_asociado.id,
+                'nombre': obj.equipo_asociado.nombre,
+                'serial': obj.equipo_asociado.serial,
+            }
+        return None
 
 class PasisalvoSerializer(serializers.ModelSerializer):
     colaborador_info = serializers.SerializerMethodField()

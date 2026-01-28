@@ -58,7 +58,18 @@ export const fetchAuthenticated = async (path: string, options: FetchOptions = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ detail: 'Error desconocido del servidor.' }));
-      throw new ApiError(errorData.detail || `Error del servidor: ${response.statusText}`, response.status);
+
+      // Si el error es un objeto con campos, intentamos extraer los mensajes
+      let errorMessage = errorData.detail || `Error del servidor: ${response.statusText}`;
+
+      if (!errorData.detail && typeof errorData === 'object') {
+        const fieldErrors = Object.entries(errorData)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+          .join('\n');
+        if (fieldErrors) errorMessage = `Errores de validación:\n${fieldErrors}`;
+      }
+
+      throw new ApiError(errorMessage, response.status);
     }
 
     if (response.status === 204) {

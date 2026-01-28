@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { useRouter } from 'next/navigation';
+import { useSede } from '@/app/context/SedeContext';
 
 // Interface para un item de estadística individual (e.g., por estado)
 interface StatItem {
@@ -13,13 +14,16 @@ interface StatItem {
 // Interface para el objeto completo de estadísticas del dashboard
 interface DashboardStats {
   total_equipos: number;
-  equipos_dados_de_baja: number; // Equipos inactivos
+  equipos_dados_de_baja: number;
   total_mantenimientos: number;
-  mantenimientos_activos: number; // Suma de 'Pendiente' y 'En proceso'
+  mantenimientos_activos: number;
+  mantenimientos_vencidos: number;
   total_perifericos: number;
   total_licencias: number;
+  licencias_vencidas: number;
+  licencias_por_vencer: number;
   total_usuarios: number;
-  proximos_mantenimientos: number; // Mantenimientos 'Pendientes' en los próximos 30 días
+  proximos_mantenimientos: number;
   equipos_por_estado: StatItem[];
   equipos_por_disponibilidad: StatItem[];
   mantenimientos_por_estado: StatItem[];
@@ -67,6 +71,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { sedeActiva } = useSede();
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -76,8 +81,10 @@ export default function DashboardPage() {
     }
 
     const fetchStats = async () => {
+      setIsLoading(true);
       try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/stats/`;
+        const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/stats/${queryParams}`;
         const response = await fetch(apiUrl, {
           headers: {
             'Authorization': `Token ${token}`,
@@ -98,7 +105,7 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [router]);
+  }, [router, sedeActiva]);
 
   // --- Renderizado condicional ---
   if (isLoading) {
@@ -152,6 +159,55 @@ export default function DashboardPage() {
             Resumen en tiempo real del inventario tecnológico y estado de los mantenimientos.
           </p>
         </div>
+
+        {/* Sección de Alertas Críticas */}
+        {(stats?.mantenimientos_vencidos || 0) > 0 || (stats?.licencias_vencidas || 0) > 0 || (stats?.licencias_por_vencer || 0) > 0 ? (
+          <div className="mb-10 animate-pulse-subtle">
+            <h2 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
+              <span className="animate-bounce">⚠️</span> Alertas Críticas de Seguridad y TI
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(stats?.mantenimientos_vencidos || 0) > 0 && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
+                  <div className="bg-red-500 text-white p-3 rounded-xl font-black text-2xl">
+                    {stats?.mantenimientos_vencidos}
+                  </div>
+                  <div>
+                    <h3 className="text-red-900 font-bold">Mantenimientos Vencidos</h3>
+                    <p className="text-red-600 text-xs font-semibold">Se requiere atención inmediata</p>
+                  </div>
+                </div>
+              )}
+              {(stats?.licencias_vencidas || 0) > 0 && (
+                <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
+                  <div className="bg-orange-500 text-white p-3 rounded-xl font-black text-2xl">
+                    {stats?.licencias_vencidas}
+                  </div>
+                  <div>
+                    <h3 className="text-orange-900 font-bold">Licencias Vencidas</h3>
+                    <p className="text-orange-600 text-xs font-semibold">Softwares sin soporte legal</p>
+                  </div>
+                </div>
+              )}
+              {(stats?.licencias_por_vencer || 0) > 0 && (
+                <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
+                  <div className="bg-amber-500 text-white p-3 rounded-xl font-black text-2xl">
+                    {stats?.licencias_por_vencer}
+                  </div>
+                  <div>
+                    <h3 className="text-amber-900 font-bold">Próximos Vencimientos</h3>
+                    <p className="text-amber-600 text-xs font-semibold">Licencias expiran pronto (30 días)</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-10 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
+            <span className="text-emerald-500">✅</span>
+            <p className="text-emerald-700 text-sm font-semibold italic">Todo está al día. No se detectaron alarmas críticas.</p>
+          </div>
+        )}
 
         {/* Sección de Estadísticas Principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">

@@ -270,7 +270,7 @@ const MantenimientosPage: React.FC = () => {
           </Link>
         </div>
       </div>
-      <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200">
+      <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 mb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <input
@@ -462,52 +462,71 @@ const MantenimientosPage: React.FC = () => {
 
       {
         mantenimientoToFinalize && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Finalizar Mantenimiento</h2>
-              <p className="mb-6 text-gray-600">
-                Para finalizar el mantenimiento del equipo <span className="font-bold">{mantenimientoToFinalize.equipo_asociado_nombre}</span>, por favor adjunta la evidencia de finalización.
-              </p>
-
-              <div className="space-y-2">
-                <label htmlFor="evidencia_finalizacion" className="block text-sm font-bold text-gray-700">
-                  📄 Evidencia de Finalización <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  id="evidencia_finalizacion"
-                  name="evidencia_finalizacion"
-                  onChange={(e) => setEvidenciaFinalizacion(e.target.files ? e.target.files[0] : null)}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                  required
-                />
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
+              <div className="p-6 bg-gray-900 border-b border-gray-800 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <span>✅</span> Finalizar Mantenimiento
+                </h2>
+                <button onClick={closeFinalizarModal} className="text-gray-400 hover:text-white transition-colors">✕</button>
               </div>
 
-              {finalizeError && (
-                <div className="mt-4 text-red-600 text-sm font-semibold">
-                  {finalizeError}
-                </div>
-              )}
+              <div className="p-8">
+                <p className="mb-6 text-gray-600 font-medium">
+                  Para cerrar el mantenimiento de <span className="text-gray-900 font-bold">{mantenimientoToFinalize.equipo_asociado_nombre}</span>, es obligatorio adjuntar una fotografía o captura técnica como evidencia del trabajo realizado.
+                </p>
 
-              <div className="flex justify-end gap-4 mt-8">
-                <button
-                  onClick={closeFinalizarModal}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors"
-                  disabled={isFinalizing}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSubmitFinalizacion}
-                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center disabled:bg-gray-400"
-                  disabled={isFinalizing || !evidenciaFinalizacion}
-                >
-                  {isFinalizing ? (
-                    <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Finalizando...</>
-                  ) : (
-                    'Confirmar Finalización'
+                <div className="space-y-4">
+                  <div className="group relative border-2 border-dashed border-gray-300 hover:border-green-500 rounded-2xl p-8 transition-all bg-gray-50 flex flex-col items-center justify-center gap-3">
+                    <input
+                      type="file"
+                      id="evidencia_finalizacion"
+                      onChange={(e) => setEvidenciaFinalizacion(e.target.files ? e.target.files[0] : null)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      required
+                    />
+                    <div className="bg-white p-4 rounded-full shadow-sm text-2xl group-hover:scale-110 transition-transform">
+                      {evidenciaFinalizacion ? '📄' : '📤'}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-gray-700">
+                        {evidenciaFinalizacion ? evidenciaFinalizacion.name : 'Haz clic o arrastra un archivo'}
+                      </p>
+                      <p className="text-xs text-gray-400 uppercase font-black tracking-widest mt-1">
+                        {evidenciaFinalizacion ? `${(evidenciaFinalizacion.size / 1024).toFixed(1)} KB` : 'JPG, PNG, PDF (MÁX. 10MB)'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {finalizeError && (
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3">
+                      <span className="text-xl">⚠️</span>
+                      <p className="text-red-700 text-sm font-bold">{finalizeError}</p>
+                    </div>
                   )}
-                </button>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <button
+                      onClick={closeFinalizarModal}
+                      className="py-4 text-gray-500 font-bold hover:bg-gray-50 rounded-2xl transition-all"
+                      disabled={isFinalizing}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSubmitFinalizacion}
+                      className="py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:bg-gray-300"
+                      disabled={isFinalizing || !evidenciaFinalizacion}
+                    >
+                      {isFinalizing ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Procesando...
+                        </>
+                      ) : 'Finalizar Ahora'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

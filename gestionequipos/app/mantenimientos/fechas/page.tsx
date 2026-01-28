@@ -98,7 +98,7 @@ const CalendarMantenimientosPage = () => {
         }
 
         const data = await response.json();
-        
+
         let pendientes = 0;
         let enProceso = 0;
         let finalizados = 0;
@@ -112,9 +112,9 @@ const CalendarMantenimientosPage = () => {
           const maintenanceDueDate = new Date(maintenanceDueDateStr);
           maintenanceDueDate.setHours(0, 0, 0, 0); // Normalizar a medianoche
 
-          const isOverdue = mantenimiento.estado_mantenimiento !== 'Finalizado' && 
-                            mantenimiento.estado_mantenimiento !== 'Cancelado' &&
-                            maintenanceDueDate < today;
+          const isOverdue = mantenimiento.estado_mantenimiento !== 'Finalizado' &&
+            mantenimiento.estado_mantenimiento !== 'Cancelado' &&
+            maintenanceDueDate < today;
 
           // Contar estadísticas
           if (isOverdue) {
@@ -257,34 +257,34 @@ const CalendarMantenimientosPage = () => {
 
         {/* Estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          <StatsCard 
-            title="Total" 
-            count={stats.total} 
-            color="text-gray-800" 
+          <StatsCard
+            title="Total"
+            count={stats.total}
+            color="text-gray-800"
             icon="from-gray-400 to-gray-500"
           />
-          <StatsCard 
-            title="Pendientes" 
-            count={stats.pendientes} 
-            color="text-blue-600" 
+          <StatsCard
+            title="Pendientes"
+            count={stats.pendientes}
+            color="text-blue-600"
             icon="from-blue-400 to-blue-500"
           />
-          <StatsCard 
-            title="En Proceso" 
-            count={stats.enProceso} 
-            color="text-yellow-600" 
+          <StatsCard
+            title="En Proceso"
+            count={stats.enProceso}
+            color="text-yellow-600"
             icon="from-yellow-400 to-yellow-500"
           />
-          <StatsCard 
-            title="Atrasados" 
-            count={stats.atrasados} 
-            color="text-red-600" 
+          <StatsCard
+            title="Atrasados"
+            count={stats.atrasados}
+            color="text-red-600"
             icon="from-red-400 to-red-500"
           />
-          <StatsCard 
-            title="Finalizados" 
-            count={stats.finalizados} 
-            color="text-green-600" 
+          <StatsCard
+            title="Finalizados"
+            count={stats.finalizados}
+            color="text-green-600"
             icon="from-green-400 to-green-500"
           />
         </div>
@@ -324,6 +324,19 @@ const CalendarMantenimientosPage = () => {
             }
             .fc .fc-toolbar {
               margin-bottom: 1.5rem;
+            }
+            @media (max-width: 768px) {
+              .fc .fc-toolbar {
+                flex-direction: column;
+                gap: 1rem;
+              }
+              .fc .fc-toolbar-chunk {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                width: 100%;
+              }
             }
             .fc .fc-toolbar-title {
               font-size: 1.5rem;
@@ -448,7 +461,7 @@ const CalendarMantenimientosPage = () => {
               }
             }
           `}</style>
-          
+
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -505,11 +518,11 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
     const maintenanceDueDateStr = event.extendedProps.fecha_finalizacion || event.start;
     const maintenanceDueDate = new Date(maintenanceDueDateStr);
     maintenanceDueDate.setHours(0, 0, 0, 0); // Normalizar a medianoche
-    
-    const isOverdue = status !== 'Finalizado' && 
-                      status !== 'Cancelado' &&
-                      maintenanceDueDate < today;
-    
+
+    const isOverdue = status !== 'Finalizado' &&
+      status !== 'Cancelado' &&
+      maintenanceDueDate < today;
+
     if (isOverdue) {
       return {
         badge: 'bg-red-100 text-red-700 border-red-300',
@@ -605,7 +618,7 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
               </svg>
             </button>
           </div>
-          
+
           {/* Fechas destacadas */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
@@ -613,10 +626,10 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
               <p className="text-sm font-semibold">
                 {(() => {
                   const [year, month, day] = event.start.split('-').map(Number);
-                  return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                  return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
                     day: '2-digit',
                     month: 'short',
-                    year: 'numeric' 
+                    year: 'numeric'
                   });
                 })()}
               </p>
@@ -627,10 +640,10 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
                 <p className="text-sm font-semibold">
                   {(() => {
                     const [year, month, day] = event.end.split('-').map(Number);
-                    return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
+                    return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
                       day: '2-digit',
                       month: 'short',
-                      year: 'numeric' 
+                      year: 'numeric'
                     });
                   })()}
                 </p>
@@ -643,35 +656,35 @@ const MaintenanceDetailModal: React.FC<MaintenanceDetailModalProps> = ({ event, 
         <div className="px-6 py-6 max-h-96 overflow-y-auto bg-gray-50">
           <div className="space-y-4">
             {event.extendedProps.responsable_nombre && (
-              <InfoSection 
+              <InfoSection
                 icon="👤"
-                label="Responsable Asignado" 
-                value={event.extendedProps.responsable_nombre} 
+                label="Responsable Asignado"
+                value={event.extendedProps.responsable_nombre}
               />
             )}
 
-            <InfoSection 
+            <InfoSection
               icon="🔍"
-              label="Descripción del Problema" 
-              value={event.extendedProps.descripcion_problema} 
+              label="Descripción del Problema"
+              value={event.extendedProps.descripcion_problema}
             />
 
-            <InfoSection 
+            <InfoSection
               icon="🔧"
-              label="Acciones Realizadas" 
-              value={event.extendedProps.acciones_realizadas} 
+              label="Acciones Realizadas"
+              value={event.extendedProps.acciones_realizadas}
             />
 
-            <InfoSection 
+            <InfoSection
               icon="🔩"
-              label="Repuestos Utilizados" 
-              value={event.extendedProps.repuestos_utilizados} 
+              label="Repuestos Utilizados"
+              value={event.extendedProps.repuestos_utilizados}
             />
 
-            <InfoSection 
+            <InfoSection
               icon="📝"
-              label="Notas Adicionales" 
-              value={event.extendedProps.notas} 
+              label="Notas Adicionales"
+              value={event.extendedProps.notas}
             />
           </div>
         </div>

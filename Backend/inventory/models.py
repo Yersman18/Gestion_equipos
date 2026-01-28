@@ -125,6 +125,7 @@ class Licencia(models.Model):
     tipo_activacion = models.CharField(max_length=50, choices=TIPO_ACTIVACION_CHOICES)
     clave = models.CharField(max_length=255, blank=True, null=True)
     fecha_instalacion = models.DateField()
+    fecha_vencimiento = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=50, choices=ESTADO_LICENCIA_CHOICES, default='Activa')
     notas = models.TextField(blank=True, null=True)
 

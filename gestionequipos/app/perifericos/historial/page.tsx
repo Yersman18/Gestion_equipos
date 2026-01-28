@@ -138,14 +138,14 @@ const HistorialPerifericosPage = () => {
             {/* Rango Fechas */}
             <div className="lg:col-span-2">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rango de Fecha de Asignación</label>
-              <div className="flex gap-2 items-center">
+              <div className="flex flex-col md:flex-row gap-2 md:items-center w-full">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                 />
-                <span className="text-gray-400">al</span>
+                <span className="hidden md:block text-gray-400">al</span>
                 <input
                   type="date"
                   value={endDate}
@@ -195,7 +195,7 @@ const HistorialPerifericosPage = () => {
                   <tr key={h.id} className="hover:bg-gray-50 transition-colors relative">
                     <td className="px-6 py-4 relative">
                       <div className={`absolute top-0 left-0 w-1 h-full ${h.es_baja ? 'bg-red-500' :
-                          h.fecha_devolucion ? 'bg-emerald-500' : 'bg-blue-500'
+                        h.fecha_devolucion ? 'bg-emerald-500' : 'bg-blue-500'
                         }`}></div>
                       <div className="text-sm font-bold text-gray-900 leading-tight pl-2">{h.periferico_nombre}</div>
                       <div className="text-[10px] text-gray-400 font-black uppercase pl-2 tracking-wider">{h.periferico_tipo}</div>

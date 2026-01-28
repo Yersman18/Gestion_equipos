@@ -88,45 +88,45 @@ function HistorialEquipo({ equipoId }: { equipoId: string | string[] }) {
       </div>
     );
   }
-  
+
   if (historial.length === 0) {
     return (
-        <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-gray-500">No hay historial de cambios para este equipo.</p>
-        </div>
+      <div className="bg-gray-50 p-4 rounded-lg text-center">
+        <p className="text-gray-500">No hay historial de cambios para este equipo.</p>
+      </div>
     )
   }
 
   return (
     <div className="w-full">
-        <div className="flex items-center mb-5 pb-3 border-b-2 border-gray-300">
-            <span className="text-2xl mr-2">🗂️</span>
-            <h3 className="text-xl font-bold text-gray-800">Historial de Cambios</h3>
-        </div>
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campo Modificado</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Anterior</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Nuevo</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {historial.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(item.fecha_cambio).toLocaleString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.usuario_nombre || 'Sistema'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.campo_modificado}</td>
-                            <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_anterior}</td>
-                            <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_nuevo}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+      <div className="flex items-center mb-5 pb-3 border-b-2 border-gray-300">
+        <span className="text-2xl mr-2">🗂️</span>
+        <h3 className="text-xl font-bold text-gray-800">Historial de Cambios</h3>
+      </div>
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campo Modificado</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Anterior</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Nuevo</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {historial.map((item) => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(item.fecha_cambio).toLocaleString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.usuario_nombre || 'Sistema'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{item.campo_modificado}</td>
+                <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_anterior}</td>
+                <td className="px-6 py-4 text-sm text-gray-500 break-words">{item.valor_nuevo}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -158,7 +158,7 @@ export default function EditarEquipoPage() {
   const [sedeId, setSedeId] = useState<number | ''>('');
   const [estadoTecnico, setEstadoTecnico] = useState('Nuevo');
   const [notas, setNotas] = useState('');
-  
+
   // --- Estados de Mantenimiento ---
   const [fechaUltimoMantenimiento, setFechaUltimoMantenimiento] = useState('');
   const [fechaProximoMantenimiento, setFechaProximoMantenimiento] = useState('');
@@ -178,7 +178,7 @@ export default function EditarEquipoPage() {
   const sigCanvasUsuario = useRef<SignatureCanvas>(null);
   const sigCanvasJefe = useRef<SignatureCanvas>(null);
   const sigCanvasCompromiso = useRef<SignatureCanvas>(null);
-  
+
   // --- Estados de Carga y Error ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,7 +218,7 @@ export default function EditarEquipoPage() {
 
   useEffect(() => {
     if (isAuthLoading || isSedesFormularioLoading) return;
-    
+
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -242,7 +242,7 @@ export default function EditarEquipoPage() {
 
         const data = await response.json();
         setEquipoData(data);
-        
+
         setNombre(data.nombre || '');
         setMarca(data.marca || '');
         setModelo(data.modelo || '');
@@ -268,9 +268,9 @@ export default function EditarEquipoPage() {
         // << CAMBIO CLAVE: Lógica para cargar el empleado asignado >>
         if (data.estado_disponibilidad === 'Asignado' && data.empleado_asignado_info) {
           setMostrandoAsignacion(true);
-          
+
           setEmpleadoAsignadoId(data.empleado_asignado_info.id);
-          
+
           if (data.fecha_entrega_a_colaborador) {
             setFechaEntrega(data.fecha_entrega_a_colaborador.split('T')[0]);
           }
@@ -339,11 +339,11 @@ export default function EditarEquipoPage() {
       estado_disponibilidad: nuevaDisponibilidad,
       fecha_proximo_mantenimiento: fechaProximoMantenimiento || null,
     };
-    
+
     // Si el formulario de asignación se ha mostrado, debemos manejar todos los campos de asignación.
     if (mostrandoAsignacion) {
       const fechaRecibidoCompleta = fechaRecibido && horaRecibido ? `${fechaRecibido}T${horaRecibido}` : null;
-      
+
       equipoData = {
         ...equipoData,
         // << CAMBIO CLAVE: Enviar `empleado_asignado` en lugar de `usuario_asignado_id` >>
@@ -374,7 +374,7 @@ export default function EditarEquipoPage() {
         const errorMessage = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('; ');
         throw new Error(errorMessage || 'Ocurrió un error al actualizar el equipo.');
       }
-      
+
       router.push('/equipos');
 
     } catch (err: any) {
@@ -425,6 +425,34 @@ export default function EditarEquipoPage() {
         </div>
       )}
 
+      {/* Diagnóstico de Salud Técnica */}
+      {equipoData && (
+        <div className={`mb-8 border-l-4 rounded-2xl p-6 shadow-sm flex items-center justify-between ${equipoData.diagnostico_salud?.color === 'green' ? 'bg-emerald-50 border-emerald-500' :
+            equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-50 border-amber-500' : 'bg-red-50 border-red-500'
+          }`}>
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-2xl text-3xl ${equipoData.diagnostico_salud?.color === 'green' ? 'bg-emerald-100' :
+                equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-100' : 'bg-red-100'
+              }`}>
+              {equipoData.diagnostico_salud?.color === 'green' ? '🛡️' :
+                equipoData.diagnostico_salud?.color === 'yellow' ? '⚠️' : '🚨'}
+            </div>
+            <div>
+              <h3 className={`text-xl font-black uppercase tracking-tight ${equipoData.diagnostico_salud?.color === 'green' ? 'text-emerald-800' :
+                  equipoData.diagnostico_salud?.color === 'yellow' ? 'text-amber-800' : 'text-red-800'
+                }`}>
+                Estado de Salud: {equipoData.diagnostico_salud?.rango}
+              </h3>
+              <p className="text-gray-600 font-medium">Diagnóstico: {equipoData.diagnostico_salud?.mensaje}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-3xl font-black text-gray-800">{equipoData.total_mantenimientos}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase">Mantenimientos Totales</p>
+          </div>
+        </div>
+      )}
+
       {/* Formulario */}
       <div className="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6">
@@ -436,14 +464,14 @@ export default function EditarEquipoPage() {
 
         <div className="p-8">
           <form className="space-y-8" onSubmit={handleSubmit}>
-            
+
             {/* Descripción del Equipo */}
             <div>
               <div className="flex items-center mb-5 pb-3 border-b-2 border-purple-200">
                 <span className="text-2xl mr-2">💻</span>
                 <h3 className="text-xl font-bold text-gray-800">Descripción del Equipo</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* ... (campos existentes) ... */}
                 <div className="space-y-2">
@@ -534,21 +562,21 @@ export default function EditarEquipoPage() {
                   <label htmlFor="sistemaOperativo" className="block text-sm font-bold text-gray-700">
                     💿 Sistema Operativo
                   </label>
-                  <input type="text" id="sistemaOperativo" value={sistemaOperativo} onChange={(e) => setSistemaOperativo(e.target.value)} placeholder="Ej: Windows 10 Pro" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"/>
+                  <input type="text" id="sistemaOperativo" value={sistemaOperativo} onChange={(e) => setSistemaOperativo(e.target.value)} placeholder="Ej: Windows 10 Pro" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="procesador" className="block text-sm font-bold text-gray-700">
                     🧠 Procesador
                   </label>
-                  <input type="text" id="procesador" value={procesador} onChange={(e) => setProcesador(e.target.value)} placeholder="Ej: Intel Core i7-11800H" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"/>
+                  <input type="text" id="procesador" value={procesador} onChange={(e) => setProcesador(e.target.value)} placeholder="Ej: Intel Core i7-11800H" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="antivirus" className="block text-sm font-bold text-gray-700">
                     🛡️ Antivirus Instalado
                   </label>
-                  <input type="text" id="antivirus" value={antivirus} onChange={(e) => setAntivirus(e.target.value)} placeholder="Ej: ESET Endpoint Security" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"/>
+                  <input type="text" id="antivirus" value={antivirus} onChange={(e) => setAntivirus(e.target.value)} placeholder="Ej: ESET Endpoint Security" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
@@ -689,29 +717,29 @@ export default function EditarEquipoPage() {
                     <span className="text-2xl mr-2">👤</span>
                     <h3 className="text-xl font-bold text-gray-800">A Cargo de</h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="relative md:col-span-2 space-y-2">
-                        {/* << CAMBIO CLAVE: Componente EmpleadoSelector integrado >> */}
-                        <EmpleadoSelector
-                          selectedEmpleadoId={empleadoAsignadoId}
-                          onSelectEmpleado={setEmpleadoAsignadoId}
-                          onEmpleadoChange={setSelectedEmpleado}
-                        />
-                        {/* Mostrar info del empleado seleccionado */}
-                        {selectedEmpleado && (
-                          <div className="mt-2 p-3 bg-gray-200 rounded-lg border border-gray-300">
-                            <p className="text-black"><strong>Cargo:</strong> {selectedEmpleado.cargo || 'No especificado'}</p>
-                            <p className="text-black"><strong>Área:</strong> {selectedEmpleado.area || 'No especificada'}</p>
-                          </div>
-                        )}
-                        <button 
-                          type="button" 
-                          className="text-red-600 hover:underline mt-2 text-sm"
-                          onClick={() => setEmpleadoAsignadoId('')}
-                        >
-                          Limpiar asignación
-                        </button>
+                      {/* << CAMBIO CLAVE: Componente EmpleadoSelector integrado >> */}
+                      <EmpleadoSelector
+                        selectedEmpleadoId={empleadoAsignadoId}
+                        onSelectEmpleado={setEmpleadoAsignadoId}
+                        onEmpleadoChange={setSelectedEmpleado}
+                      />
+                      {/* Mostrar info del empleado seleccionado */}
+                      {selectedEmpleado && (
+                        <div className="mt-2 p-3 bg-gray-200 rounded-lg border border-gray-300">
+                          <p className="text-black"><strong>Cargo:</strong> {selectedEmpleado.cargo || 'No especificado'}</p>
+                          <p className="text-black"><strong>Área:</strong> {selectedEmpleado.area || 'No especificada'}</p>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className="text-red-600 hover:underline mt-2 text-sm"
+                        onClick={() => setEmpleadoAsignadoId('')}
+                      >
+                        Limpiar asignación
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -722,7 +750,7 @@ export default function EditarEquipoPage() {
                     <span className="text-2xl mr-2">✅</span>
                     <h3 className="text-xl font-bold text-gray-800">Recibido a Satisfacción</h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -756,7 +784,7 @@ export default function EditarEquipoPage() {
                       <label htmlFor="responsableEntrega" className="block text-sm font-bold text-gray-700">
                         Responsable de la Entrega (TI)
                       </label>
-                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed"/>
+                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed" />
                     </div>
 
                     <div className="space-y-2">
@@ -764,7 +792,7 @@ export default function EditarEquipoPage() {
                         ✍️ Firma de quien recibe
                       </label>
                       <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                        <SignatureCanvas ref={sigCanvasUsuario} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                        <SignatureCanvas ref={sigCanvasUsuario} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                       </div>
                       <button
                         type="button"
@@ -784,7 +812,7 @@ export default function EditarEquipoPage() {
                     <h3 className="text-xl font-bold text-gray-800">Datos de Jefe Inmediato</h3>
                     <span className="ml-2 text-sm text-gray-500">(Opcional)</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label htmlFor="nombreJefe" className="block text-sm font-bold text-gray-700">
@@ -817,7 +845,7 @@ export default function EditarEquipoPage() {
                         ✍️ Firma del Jefe Inmediato
                       </label>
                       <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                        <SignatureCanvas ref={sigCanvasJefe} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                        <SignatureCanvas ref={sigCanvasJefe} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                       </div>
                       <button
                         type="button"
@@ -836,7 +864,7 @@ export default function EditarEquipoPage() {
                     <span className="text-2xl mr-2">📋</span>
                     <h3 className="text-xl font-bold text-gray-800">Compromiso</h3>
                   </div>
-                  
+
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border-l-4 border-orange-400 mb-4">
                     <p className="text-sm text-gray-700 leading-relaxed">
                       Declaro haber recibido el equipo descrito y me comprometo a mantenerlo en buen estado. Notificaré de inmediato al área de TI cualquier falla para su atención. Autorizo el descuento del valor del equipo en caso de daños, pérdidas o uso indebido, y asumo la responsabilidad de aplicar las medidas necesarias para su cuidado y seguridad.
@@ -848,7 +876,7 @@ export default function EditarEquipoPage() {
                       ✍️ Firma de leído y entendido
                     </label>
                     <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                      <SignatureCanvas ref={sigCanvasCompromiso} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                      <SignatureCanvas ref={sigCanvasCompromiso} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                     </div>
                     <button
                       type="button"

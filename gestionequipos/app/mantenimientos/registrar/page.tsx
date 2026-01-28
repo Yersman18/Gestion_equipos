@@ -59,13 +59,13 @@ export default function RegistrarMantenimientoPage() {
       setLoading(false);
       return;
     }
-    
+
     setFormData((prev) => ({ ...prev, sede: sedeActiva?.id || '' }));
 
     const fetchInitialData = async () => {
       try {
         const headers = { 'Authorization': `Token ${token}` };
-        
+
         const urlEquipos = `${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${user?.is_superuser || !sedeActiva ? '' : `?sede=${sedeActiva?.id}`}`;
         const equiposRes = await fetch(urlEquipos, { headers });
         if (!equiposRes.ok) throw new Error('Error al cargar equipos.');
@@ -131,16 +131,16 @@ export default function RegistrarMantenimientoPage() {
       setLoading(false);
       return;
     }
-    
+
     let headers: HeadersInit = {
       'Authorization': `Token ${token}`,
     };
-    
+
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
-        if (value) {
-          data.append(key, String(value));
-        }
+      if (value) {
+        data.append(key, String(value));
+      }
     });
 
     evidencias.forEach((file) => {
@@ -160,15 +160,21 @@ export default function RegistrarMantenimientoPage() {
         let errorData;
         try {
           errorData = await response.json();
-          if (typeof errorData === 'object' && errorData !== null) {
-            const messages = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`);
-            throw new Error(messages.join(' | '));
-          }
-        } catch (e) {
-          if (e instanceof Error) throw e;
-          errorData = { detail: await response.text() };
+        } catch (parseError) {
+          // Si la respuesta no es JSON válido (ej. HTML de error 500), asumimos el caso más probable reportado
+          throw new Error('Error de servidor. Es muy probable que ya exista un mantenimiento activo (Pendiente o En Proceso) para este equipo. Por favor verifique el historial.');
         }
-        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+
+        if (typeof errorData === 'object' && errorData !== null) {
+          const messages = Object.entries(errorData).map(([key, value]) => {
+            // Mejora formato de mensajes: ignora keys técnicos si es posible o formatéalos mejor
+            const msg = Array.isArray(value) ? value.join(', ') : String(value);
+            return key === 'detail' || key === 'non_field_errors' ? msg : `${key}: ${msg}`;
+          });
+          throw new Error(messages.join(' | '));
+        }
+
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       setSuccessMessage('Mantenimiento registrado exitosamente.');
@@ -185,14 +191,14 @@ export default function RegistrarMantenimientoPage() {
       setEvidencias([]);
       const fileInput = document.getElementById('evidencias') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-      
+
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-  
+
   if (loading && !isAuthLoading) {
     return (
       <Layout>
@@ -255,7 +261,7 @@ export default function RegistrarMantenimientoPage() {
                 <span className="text-2xl mr-2">📋</span>
                 <h3 className="text-xl font-bold text-gray-800">Información General</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label htmlFor="equipo" className="block text-sm font-bold text-gray-700">
@@ -362,7 +368,7 @@ export default function RegistrarMantenimientoPage() {
                     <option value="Correctivo">🔧 Correctivo</option>
                   </select>
                 </div>
-                
+
                 <div className="md:col-span-2 space-y-2">
                   <label htmlFor="descripcion_problema" className="block text-sm font-bold text-gray-700">
                     🔍 Descripción del Problema <span className="text-red-500">*</span>
@@ -414,9 +420,9 @@ export default function RegistrarMantenimientoPage() {
                       <ul className="space-y-2">
                         {evidencias.map((file, index) => (
                           <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-                            <a 
-                              href={URL.createObjectURL(file)} 
-                              target="_blank" 
+                            <a
+                              href={URL.createObjectURL(file)}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-green-600 hover:text-green-800 hover:underline truncate"
                               title={file.name}

@@ -11,20 +11,27 @@ class EmpleadoListCreateAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        # El chequeo de 'is_authenticated' ya lo hace la permission_class
         
+        is_admin = False
+        user_profile = None
         try:
             user_profile = user.profile
             if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
-                return Empleado.objects.all()
+                is_admin = True
         except UserProfile.DoesNotExist:
             if user.is_staff or user.is_superuser:
-                return Empleado.objects.all()
-            return Empleado.objects.none()
+                is_admin = True
 
-        if hasattr(user_profile, 'sede') and user_profile.sede:
-            # Asumiendo que Empleado tiene una relación a User y User a UserProfile con Sede
-            return Empleado.objects.filter(user__profile__sede=user_profile.sede)
+        queryset = Empleado.objects.all()
+
+        if is_admin:
+            sede_id = self.request.query_params.get('sede')
+            if sede_id:
+                queryset = queryset.filter(sede_id=sede_id)
+            return queryset
+        
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            return queryset.filter(sede=user_profile.sede)
 
         return Empleado.objects.none()
 
