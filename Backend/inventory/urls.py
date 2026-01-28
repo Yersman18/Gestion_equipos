@@ -7,7 +7,7 @@ from .views import (
     PerifericoListCreateAPIView, PerifericoRetrieveUpdateDestroyAPIView,
     LicenciaListCreateAPIView, LicenciaRetrieveUpdateDestroyAPIView,
     PasisalvoListCreateAPIView, PasisalvoRetrieveUpdateDestroyAPIView,
-    DashboardStatsView, HistorialPerifericoListAPIView, HistorialEquipoListView
+    DashboardStatsView, HistorialPerifericoListAPIView, HistorialEquipoListView, HistorialMovimientoEquipoListAPIView
 )
 
 # Crear un router y registrar nuestros viewsets con él.
@@ -16,14 +16,15 @@ router.register(r'equipos', EquipoViewSet, basename='equipo')
 
 # El API URLs ahora son determinadas automáticamente por el router.
 urlpatterns = [
-    path('', include(router.urls)),
+    # URLs para Equipos (rutas adicionales)
+    path('equipos/historial/', HistorialMovimientoEquipoListAPIView.as_view(), name='historial-equipo-movimiento-list'),
+    path('equipos/<int:equipo_pk>/historial/', HistorialEquipoListView.as_view(), name='equipo-historial-list'),
 
-    # URLs para Sedes (se mantienen si no son ViewSets)
+    # URLs para Sedes
     path('sedes/', SedeListCreateAPIView.as_view(), name='sede-list-create'),
     path('sedes/<int:pk>/', SedeRetrieveUpdateDestroyAPIView.as_view(), name='sede-detail'),
 
-    # URLs para Equipos (rutas adicionales)
-    path('equipos/<int:equipo_pk>/historial/', HistorialEquipoListView.as_view(), name='equipo-historial-list'),
+    path('', include(router.urls)),
 
     # URLs para Perifericos
     path('perifericos/', PerifericoListCreateAPIView.as_view(), name='periferico-list-create'),

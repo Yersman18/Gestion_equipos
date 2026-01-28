@@ -208,3 +208,33 @@ class HistorialEquipo(models.Model):
 
     def __str__(self):
         return f"Cambio en {self.equipo.nombre} por {self.usuario.username if self.usuario else 'Sistema'} el {self.fecha_cambio.strftime('%Y-%m-%d %H:%M')}"
+
+class HistorialMovimientoEquipo(models.Model):
+    """
+    Modelo para registrar el historial de asignación de equipos, similar al de periféricos.
+    """
+    equipo = models.ForeignKey(Equipo, on_delete=models.SET_NULL, null=True, blank=True, related_name='historial_movimientos')
+    equipo_nombre = models.CharField(max_length=200, null=True, blank=True, verbose_name="Nombre del Equipo (Histórico)")
+    equipo_serial = models.CharField(max_length=100, null=True, blank=True, verbose_name="Serial del Equipo (Histórico)")
+    empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Empleado Asignado")
+    fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Asignación")
+    fecha_devolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Devolución")
+    observacion_devolucion = models.TextField(blank=True, null=True, verbose_name="Observación")
+    es_baja = models.BooleanField(default=False, verbose_name="Fue dado de baja")
+    fecha_baja = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Baja")
+
+    def save(self, *args, **kwargs):
+        if self.equipo:
+            if not self.equipo_nombre:
+                self.equipo_nombre = self.equipo.nombre
+            if not self.equipo_serial:
+                self.equipo_serial = self.equipo.serial
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Historial de Movimiento de Equipo"
+        verbose_name_plural = "Historial de Movimientos de Equipos"
+        ordering = ['-fecha_asignacion']
+
+    def __str__(self):
+        return f"Movimiento de {self.equipo_nombre} - {self.equipo_serial}"

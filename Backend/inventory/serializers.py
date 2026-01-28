@@ -2,8 +2,8 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from sede.models import Sede # Importado desde sede.models
 from mantenimientos.models import Mantenimiento # Importado desde mantenimientos.models
-from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialEquipo
-from .models import HistorialPeriferico # Asegúrate de importar el nuevo modelo
+from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialEquipo, HistorialMovimientoEquipo
+from .models import HistorialPeriferico
 from usuarios.serializers import UserSerializer # Importar UserSerializer
 
 
@@ -169,3 +169,17 @@ class HistorialEquipoSerializer(serializers.ModelSerializer):
             'tipo_accion',
             'usuario_nombre',
         ]
+
+class HistorialMovimientoEquipoSerializer(serializers.ModelSerializer):
+    equipo_nombre = serializers.CharField(read_only=True)
+    equipo_serial = serializers.CharField(read_only=True)
+    empleado_nombre = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = HistorialMovimientoEquipo
+        fields = '__all__'
+
+    def get_empleado_nombre(self, obj):
+        if obj.empleado_asignado:
+            return f"{obj.empleado_asignado.nombre} {obj.empleado_asignado.apellido}"
+        return "Sin asignar"

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
-from .models import Equipo, HistorialEquipo, Periferico, HistorialPeriferico
+from .models import Equipo, HistorialEquipo, Periferico, HistorialPeriferico, HistorialMovimientoEquipo
 from .middleware import get_current_user
 
 @receiver(pre_save, sender=Equipo)
@@ -136,3 +136,59 @@ def log_periferico_baja(sender, instance, **kwargs):
         fecha_baja=timezone.now(),
         observacion_devolucion="SISTEMA: PERIFÉRICO DADO DE BAJA"
     )
+
+@receiver(post_save, sender=Equipo)
+def log_equipo_movement(sender, instance, created, **kwargs):
+    old_instance = getattr(instance, '_old_instance', None)
+    
+    # 1. Caso: Nuevo equipo con empleado asignado
+    if created and instance.empleado_asignado:
+        HistorialMovimientoEquipo.objects.create(
+            equipo=instance,
+            empleado_asignado=instance.empleado_asignado
+        )
+    
+    # 2. Caso: Actualización de equipo
+    elif old_instance:
+        # Cambio de empleado (Asignación o Reasignación)
+        if instance.empleado_asignado != old_instance.empleado_asignado:
+            # Si había un empleado anterior, cerrar su registro de movimiento
+            if old_instance.empleado_asignado:
+                HistorialMovimientoEquipo.objects.filter(
+                    equipo=instance,
+                    empleado_asignado=old_instance.empleado_asignado,
+                    fecha_devolucion__isnull=True,
+                    es_baja=False
+                ).update(
+                    fecha_devolucion=timezone.now(),
+                    observacion_devolucion="Cambio de asignación o devolución"
+                )
+            
+            # Si hay un nuevo empleado, crear nuevo registro
+            if instance.empleado_asignado:
+                HistorialMovimientoEquipo.objects.create(
+                    equipo=instance,
+                    empleado_asignado=instance.empleado_asignado
+                )
+        
+        # Caso: El equipo se da de baja
+        if old_instance.activo and not instance.activo:
+            # Si estaba asignado, cerrar la asignación
+            if instance.empleado_asignado:
+                HistorialMovimientoEquipo.objects.filter(
+                    equipo=instance,
+                    empleado_asignado=instance.empleado_asignado,
+                    fecha_devolucion__isnull=True,
+                    es_baja=False
+                ).update(
+                    fecha_devolucion=timezone.now(),
+                    observacion_devolucion="Devolución por baja del equipo"
+                )
+            
+            # Crear registro de baja
+            HistorialMovimientoEquipo.objects.create(
+                equipo=instance,
+                es_baja=True,
+                fecha_baja=timezone.now(),
+                observacion_devolucion="SISTEMA: EQUIPO DADO DE BAJA"
+            )

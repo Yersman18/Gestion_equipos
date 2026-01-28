@@ -10,19 +10,26 @@ interface SidebarProps {
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Equipos', href: '/equipos', icon: '💻', submenu: [
-    { name: 'Registrar equipo', href: '/equipos/registrar' }
-  ]},
-  { name: 'Mantenimiento', href: '/mantenimientos', icon: '🔧', submenu: [
-    { name: 'Registrar', href: '/mantenimientos/registrar' },
-    { name: 'Historial', href: '/mantenimientos/historial' },
-    { name: 'Fechas', href: '/mantenimientos/fechas' }
-  ]},
+  {
+    name: 'Equipos', href: '/equipos', icon: '💻', submenu: [
+      { name: 'Registrar equipo', href: '/equipos/registrar' },
+      { name: 'Historial', href: '/equipos/historial' }
+    ]
+  },
+  {
+    name: 'Mantenimiento', href: '/mantenimientos', icon: '🔧', submenu: [
+      { name: 'Registrar', href: '/mantenimientos/registrar' },
+      { name: 'Historial', href: '/mantenimientos/historial' },
+      { name: 'Fechas', href: '/mantenimientos/fechas' }
+    ]
+  },
   { name: 'Empleados', href: '/empleados', icon: '👥' },
-  { name: 'Periféricos', href: '/perifericos', icon: '🖱️', submenu: [
-    { name: 'Inventario', href: '/perifericos/inventario' },
-    { name: 'Historial', href: '/perifericos/historial' }
-  ]},
+  {
+    name: 'Periféricos', href: '/perifericos', icon: '🖱️', submenu: [
+      { name: 'Inventario', href: '/perifericos/inventario' },
+      { name: 'Historial', href: '/perifericos/historial' }
+    ]
+  },
   { name: 'Configuración', href: '/configuracion', icon: '⚙️' },
 ];
 
@@ -40,9 +47,9 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       {/* Logo */}
       <div className="h-20 flex items-center justify-center bg-black/20 border-b border-green-500/20">
         <div className="bg-white rounded-lg px-6 py-2 shadow-lg">
-           
-            <img src="/img/logo.png" alt="INTEGRA Logo" className="h-12" />
-          
+
+          <img src="/img/logo.png" alt="INTEGRA Logo" className="h-12" />
+
         </div>
       </div>
 
@@ -51,7 +58,7 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         {navItems.map((item) => (
           <div key={item.name}>
             <Link href={item.href} onClick={handleLinkClick}>
-              <div 
+              <div
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-green-500/10 transition-all duration-200 cursor-pointer group border border-transparent hover:border-green-500/30"
               >
                 <div className="flex items-center">
@@ -59,7 +66,7 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                   <span className="font-medium group-hover:text-green-400 transition-colors">{item.name}</span>
                 </div>
                 {item.submenu && (
-                  <span 
+                  <span
                     onClick={(e) => {
                       e.preventDefault();
                       setExpandedItem(expandedItem === item.name ? null : item.name);
@@ -71,11 +78,11 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                 )}
               </div>
             </Link>
-            
+
             {/* Submenu */}
             {item.submenu && expandedItem === item.name && (
               <div className="ml-8 mt-1 space-y-1">
-                {item.submenu.map((subitem) => ( 
+                {item.submenu.map((subitem) => (
                   <Link key={subitem.name} href={subitem.href}>
                     <div className="p-2 pl-4 text-sm text-gray-300 hover:text-green-400 hover:bg-green-500/5 rounded-lg transition-all cursor-pointer border-l-2 border-transparent hover:border-green-500">
                       {subitem.name}

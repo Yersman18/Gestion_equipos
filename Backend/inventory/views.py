@@ -9,11 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.models import User
 from sede.models import Sede
 from mantenimientos.models import Mantenimiento
-from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo
+from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo, HistorialMovimientoEquipo
 from usuarios.models import UserProfile
 from usuarios.permissions import IsAdminOrOwnerBySede # <-- IMPORTAR
 from django.db.models import Count, Q
-from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer
+from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer, HistorialMovimientoEquipoSerializer
 import django_filters.rest_framework
 from rest_framework import viewsets
 
@@ -256,6 +256,30 @@ class HistorialPerifericoListAPIView(generics.ListAPIView):
     queryset = HistorialPeriferico.objects.all()
     serializer_class = HistorialPerifericoSerializer
     permission_classes = [IsAuthenticated]
+
+class HistorialMovimientoEquipoListAPIView(generics.ListAPIView):
+    queryset = HistorialMovimientoEquipo.objects.all()
+    serializer_class = HistorialMovimientoEquipoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = HistorialMovimientoEquipo.objects.all()
+
+        try:
+            user_profile = user.profile
+            # Si no es admin, filtrar por sede de los equipos
+            if not (user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN')):
+                if hasattr(user_profile, 'sede') and user_profile.sede:
+                    # Filtramos por la sede del equipo al que pertenece el movimiento
+                    queryset = queryset.filter(equipo__sede=user_profile.sede)
+                else:
+                    return HistorialMovimientoEquipo.objects.none()
+        except UserProfile.DoesNotExist:
+            if not (user.is_staff or user.is_superuser):
+                return HistorialMovimientoEquipo.objects.none()
+
+        return queryset
 
 from datetime import datetime, timedelta
 

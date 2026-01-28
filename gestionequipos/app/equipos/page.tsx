@@ -307,13 +307,22 @@ export default function EquiposPage() {
                 : (sedeActiva ? `Inventario tecnológico asignado a la sede: ${sedeActiva.nombre}` : 'Selecciona una sede para gestionar el inventario')}
             </p>
           </div>
-          <Link
-            href="/equipos/registrar"
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center space-x-2"
-          >
-            <span className="text-xl">➕</span>
-            <span>Registrar Equipo</span>
-          </Link>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href="/equipos/historial"
+              className="bg-white hover:bg-gray-50 text-blue-600 border-2 border-blue-600 font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-sm flex items-center justify-center space-x-2"
+            >
+              <span className="text-xl">📜</span>
+              <span>Historial de Movimientos</span>
+            </Link>
+            <Link
+              href="/equipos/registrar"
+              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center space-x-2"
+            >
+              <span className="text-xl">➕</span>
+              <span>Registrar Equipo</span>
+            </Link>
+          </div>
         </div>
 
         {/* Barra de búsqueda y filtros */}
