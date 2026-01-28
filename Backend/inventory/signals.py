@@ -1,6 +1,7 @@
+from django.utils import timezone
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from .models import Equipo, HistorialEquipo
+from .models import Equipo, HistorialEquipo, Periferico, HistorialPeriferico
 from .middleware import get_current_user
 
 @receiver(pre_save, sender=Equipo)
@@ -70,3 +71,49 @@ def log_equipo_changes(sender, instance, created, **kwargs):
                     valor_nuevo=str(new_value),
                     tipo_accion='ACTUALIZADO'
                 )
+
+@receiver(pre_save, sender=Periferico)
+def cache_old_periferico_instance(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            instance._old_instance = Periferico.objects.get(pk=instance.pk)
+        except Periferico.DoesNotExist:
+            instance._old_instance = None
+    else:
+        instance._old_instance = None
+
+
+@receiver(post_save, sender=Periferico)
+def log_periferico_assignment(sender, instance, created, **kwargs):
+    old_instance = getattr(instance, '_old_instance', None)
+    
+    # Si se acaba de asignar (antes era None y ahora tiene empleado)
+    if (not old_instance or not old_instance.empleado_asignado) and instance.empleado_asignado:
+        HistorialPeriferico.objects.create(
+            periferico=instance,
+            empleado_asignado=instance.empleado_asignado,
+            equipo_asociado=instance.equipo_asociado
+        )
+    
+    # Si se cambió de un empleado a otro
+    elif old_instance and old_instance.empleado_asignado and instance.empleado_asignado and old_instance.empleado_asignado != instance.empleado_asignado:
+        # Marcar devolución del anterior
+        HistorialPeriferico.objects.filter(
+            periferico=instance, 
+            empleado_asignado=old_instance.empleado_asignado,
+            fecha_devolucion__isnull=True
+        ).update(fecha_devolucion=instance.fecha_entrega or timezone.now(), observacion_devolucion="Reasignación automática")
+        
+        HistorialPeriferico.objects.create(
+            periferico=instance,
+            empleado_asignado=instance.empleado_asignado,
+            equipo_asociado=instance.equipo_asociado
+        )
+    
+    # Si se devolvió (antes tenía empleado y ahora no)
+    elif old_instance and old_instance.empleado_asignado and not instance.empleado_asignado:
+        HistorialPeriferico.objects.filter(
+            periferico=instance, 
+            empleado_asignado=old_instance.empleado_asignado,
+            fecha_devolucion__isnull=True
+        ).update(fecha_devolucion=timezone.now(), observacion_devolucion="Devolución automática")

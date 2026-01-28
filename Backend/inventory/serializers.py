@@ -140,11 +140,17 @@ class PasisalvoSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_generacion', 'estado', 'detalles_pendientes', 'colaborador_username', 'generado_por_username']
 
 class HistorialPerifericoSerializer(serializers.ModelSerializer):
-    periferico = serializers.StringRelatedField()
-    usuario_asignado = serializers.StringRelatedField()
+    periferico_nombre = serializers.CharField(source='periferico.nombre', read_only=True)
+    empleado_nombre = serializers.SerializerMethodField()
+    
     class Meta:
         model = HistorialPeriferico
         fields = '__all__'
+
+    def get_empleado_nombre(self, obj):
+        if obj.empleado_asignado:
+            return f"{obj.empleado_asignado.nombre} {obj.empleado_asignado.apellido}"
+        return "Sin asignar"
 
 class HistorialEquipoSerializer(serializers.ModelSerializer):
     """
