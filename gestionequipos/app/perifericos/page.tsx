@@ -28,9 +28,9 @@ const PerifericosPage = () => {
         setPerifericos(data);
       } catch (err) {
         if (err instanceof Error) {
-            setError(err.message);
+          setError(err.message);
         } else {
-            setError('Ocurrió un error desconocido');
+          setError('Ocurrió un error desconocido');
         }
       } finally {
         setLoading(false);
@@ -40,8 +40,33 @@ const PerifericosPage = () => {
     fetchPerifericos();
   }, []);
 
+  const handleReturn = async (periferico: Periferico) => {
+    if (window.confirm(`¿Confirmar devolución de ${periferico.nombre}? Quedará disponible en inventario.`)) {
+      try {
+        await fetchAuthenticated(`/api/perifericos/${periferico.id}/`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            ...periferico,
+            empleado_asignado: null,
+            estado_disponibilidad: 'Disponible',
+            fecha_entrega: null
+          }),
+        });
+
+        // Actualizar lista local
+        setPerifericos(perifericos.map(p =>
+          p.id === periferico.id
+            ? { ...p, estado_disponibilidad: 'Disponible', empleado_asignado_info: undefined }
+            : p
+        ));
+      } catch (err: any) {
+        alert(`Error al devolver: ${err.message}`);
+      }
+    }
+  };
+
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este periférico?')) {
+    if (window.confirm('¿Estás seguro de que deseas dar de baja este periférico? Se eliminará del inventario activo pero quedará en el historial.')) {
       try {
         await fetchAuthenticated(`/api/perifericos/${id}/`, {
           method: 'DELETE',
@@ -49,17 +74,20 @@ const PerifericosPage = () => {
         setPerifericos(perifericos.filter(p => p.id !== id));
       } catch (err) {
         if (err instanceof Error) {
-            alert(`Error al eliminar: ${err.message}`);
+          alert(`Error al eliminar: ${err.message}`);
         } else {
-            alert('Ocurrió un error desconocido al eliminar.');
+          alert('Ocurrió un error desconocido al eliminar.');
         }
       }
     }
   };
 
-  const filteredPerifericos = perifericos.filter(periferico =>
-    periferico.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPerifericos = perifericos.filter(periferico => {
+    const search = searchTerm.toLowerCase();
+    const matchesNombre = periferico.nombre.toLowerCase().includes(search);
+    const matchesEmpleado = periferico.empleado_asignado_info?.nombre_completo?.toLowerCase().includes(search);
+    return matchesNombre || matchesEmpleado;
+  });
 
   if (loading) {
     return (
@@ -98,14 +126,14 @@ const PerifericosPage = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <Link 
-              href="/perifericos/registrar" 
+            <Link
+              href="/perifericos/registrar"
               className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
             >
               Registrar Periférico
             </Link>
-            <Link 
-              href="/perifericos/registrar/lote" 
+            <Link
+              href="/perifericos/registrar/lote"
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
             >
               Registrar en Lote
@@ -117,7 +145,7 @@ const PerifericosPage = () => {
         <div className="mb-6">
           <input
             type="text"
-            placeholder="Buscar por nombre..."
+            placeholder="Buscar por tipo de periférico o nombre de colaborador..."
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -127,7 +155,7 @@ const PerifericosPage = () => {
         {/* Table Rows */}
         <div className="space-y-4">
           {filteredPerifericos.map((periferico) => (
-            <div 
+            <div
               key={periferico.id}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100 overflow-hidden"
             >
@@ -136,9 +164,8 @@ const PerifericosPage = () => {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-4">
                     <h3 className="text-lg font-semibold text-gray-800">{periferico.nombre}</h3>
-                    <span className="text-gray-500 text-sm font-medium px-3 py-1 bg-gray-100 rounded">{periferico.tipo}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -155,14 +182,13 @@ const PerifericosPage = () => {
                 <div className="flex flex-wrap gap-4 items-center">
                   <div className="flex flex-col gap-1">
                     <span className="text-gray-500 text-xs font-medium">Estado técnico</span>
-                    <span 
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        periferico.estado_tecnico === 'Funcional' 
-                          ? 'bg-green-100 text-green-700'
-                          : periferico.estado_tecnico === 'Nuevo'
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${periferico.estado_tecnico === 'Funcional'
+                        ? 'bg-green-100 text-green-700'
+                        : periferico.estado_tecnico === 'Nuevo'
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-orange-100 text-orange-700'
-                      }`}
+                        }`}
                     >
                       {periferico.estado_tecnico}
                     </span>
@@ -170,12 +196,11 @@ const PerifericosPage = () => {
 
                   <div className="flex flex-col gap-1">
                     <span className="text-gray-500 text-xs font-medium">Disponibilidad</span>
-                    <span 
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        periferico.estado_disponibilidad === 'Disponible'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${periferico.estado_disponibilidad === 'Disponible'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                        }`}
                     >
                       {periferico.estado_disponibilidad}
                     </span>
@@ -183,14 +208,22 @@ const PerifericosPage = () => {
                 </div>
 
                 {/* Right Section - Actions */}
-                <div className="flex gap-3">
+                <div className="flex gap-2">
+                  {periferico.estado_disponibilidad === 'Asignado' && (
+                    <button
+                      onClick={() => handleReturn(periferico)}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm shadow-sm"
+                    >
+                      Devolver
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(periferico.id)}
                     className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm shadow-sm"
                   >
                     Dar de Baja
                   </button>
-                  <Link 
+                  <Link
                     href={`/perifericos/editar/${periferico.id}`}
                     className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 text-sm shadow-sm inline-block"
                   >

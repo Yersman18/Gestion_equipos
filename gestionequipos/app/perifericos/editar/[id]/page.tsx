@@ -131,19 +131,18 @@ const EditarPerifericoPage = () => {
                             {error}
                         </div>
                     )}
-                    <div className="mb-4">
-                        <label htmlFor="nombre" className="block text-gray-700 font-bold mb-2">Nombre</label>
-                        <input
-                            type="text" id="nombre" name="nombre"
-                            value={formData.nombre} onChange={handleChange}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" required
-                        />
-                    </div>
-
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label htmlFor="tipo" className="block text-gray-700 font-bold mb-2">Tipo</label>
-                            <select name="tipo" value={formData.tipo} onChange={handleChange} className="shadow border rounded w-full py-2 px-3 text-gray-700">
+                            <select
+                                name="tipo"
+                                value={formData.tipo}
+                                onChange={(e) => {
+                                    const newTipo = e.target.value;
+                                    setFormData(prev => prev ? { ...prev, tipo: newTipo, nombre: newTipo } : null);
+                                }}
+                                className="shadow border rounded w-full py-2 px-3 text-gray-700"
+                            >
                                 {TIPO_PERIFERICO_CHOICES.map(op => <option key={op} value={op}>{op}</option>)}
                             </select>
                         </div>

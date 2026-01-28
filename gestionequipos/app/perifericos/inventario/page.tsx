@@ -12,19 +12,14 @@ interface Periferico {
   tipo: string;
   estado_tecnico: string;
   estado_disponibilidad: string;
-}
-
-interface Empleado {
-  id: number;
-  nombre: string;
-  apellido: string;
-  cargo?: string;
-  area?: string;
+  empleado_asignado: number | null;
 }
 
 const InventarioPerifericosPage = () => {
   const router = useRouter();
-  const [perifericos, setPerifericos] = useState<Periferico[]>([]);
+  const [availablePerifericos, setAvailablePerifericos] = useState<Periferico[]>([]);
+  const [allPerifericos, setAllPerifericos] = useState<Periferico[]>([]);
+  const [empleadoPerifericos, setEmpleadoPerifericos] = useState<string[]>([]); // Tipos que ya tiene el empleado
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | ''>('');
   const [loading, setLoading] = useState(true);
@@ -37,8 +32,9 @@ const InventarioPerifericosPage = () => {
     const fetchPerifericos = async () => {
       try {
         const data = await fetchAuthenticated('/api/perifericos/');
+        setAllPerifericos(data);
         // Solo mostramos periféricos que NO estén asignados
-        setPerifericos(data.filter((p: Periferico) => p.estado_disponibilidad === 'Disponible'));
+        setAvailablePerifericos(data.filter((p: Periferico) => p.estado_disponibilidad === 'Disponible'));
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -48,7 +44,44 @@ const InventarioPerifericosPage = () => {
     fetchPerifericos();
   }, []);
 
+  // Detectar periféricos que ya tiene el empleado seleccionado
+  useEffect(() => {
+    if (selectedEmpleadoId) {
+      const heldTypes = allPerifericos
+        .filter(p => p.empleado_asignado === selectedEmpleadoId)
+        .map(p => p.tipo);
+      setEmpleadoPerifericos(heldTypes);
+
+      // Limpiar selección de periféricos cuyos tipos ya tiene el empleado
+      setSelectedIds(prev => prev.filter(id => {
+        const p = availablePerifericos.find(item => item.id === id);
+        return p && !heldTypes.includes(p.tipo);
+      }));
+    } else {
+      setEmpleadoPerifericos([]);
+    }
+  }, [selectedEmpleadoId, allPerifericos, availablePerifericos]);
+
   const handleToggleSelect = (id: number) => {
+    const p = availablePerifericos.find(item => item.id === id);
+    if (!p) return;
+
+    if (!selectedIds.includes(id)) {
+      // Validar si el empleado ya tiene este tipo
+      if (empleadoPerifericos.includes(p.tipo)) {
+        alert(`Este colaborador ya tiene asignado un periférico de tipo: ${p.tipo}. Debe devolver el anterior antes de asignar uno nuevo.`);
+        return;
+      }
+      // Validar si ya seleccionó otro del mismo tipo en esta sesión
+      const alreadySelectedTypeOfSameType = availablePerifericos.find(
+        item => selectedIds.includes(item.id) && item.tipo === p.tipo
+      );
+      if (alreadySelectedTypeOfSameType) {
+        alert(`Ya has seleccionado otro ${p.tipo} para asignar. Solo puedes asignar uno de cada tipo.`);
+        return;
+      }
+    }
+
     setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
@@ -58,7 +91,21 @@ const InventarioPerifericosPage = () => {
     if (selectedIds.length === filteredPerifericos.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredPerifericos.map(p => p.id));
+      // Solo seleccionar los que no causen conflicto de tipo
+      const newSelection: number[] = [];
+      const selectedTypesCount: Record<string, boolean> = {};
+
+      filteredPerifericos.forEach(p => {
+        if (!empleadoPerifericos.includes(p.tipo) && !selectedTypesCount[p.tipo]) {
+          newSelection.push(p.id);
+          selectedTypesCount[p.tipo] = true;
+        }
+      });
+
+      if (newSelection.length < filteredPerifericos.length) {
+        alert("Algunos periféricos no se seleccionaron porque el colaborador ya tiene ese tipo o hay duplicados en la lista.");
+      }
+      setSelectedIds(newSelection);
     }
   };
 
@@ -74,10 +121,8 @@ const InventarioPerifericosPage = () => {
 
     setSubmitting(true);
     try {
-      // Como no hay endpoint de bulk update, lo hacemos uno por uno (o podrías sugerir crear uno en el backend)
-      // Para efectos de simplicidad en esta fase, usaremos Promise.all
       const promises = selectedIds.map(id => {
-        const p = perifericos.find(item => item.id === id);
+        const p = availablePerifericos.find(item => item.id === id);
         return fetchAuthenticated(`/api/perifericos/${id}/`, {
           method: 'PUT',
           body: JSON.stringify({
@@ -99,13 +144,13 @@ const InventarioPerifericosPage = () => {
     }
   };
 
-  const filteredPerifericos = perifericos.filter(p => {
+  const filteredPerifericos = availablePerifericos.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTipo = filterTipo === 'Todos' || p.tipo === filterTipo;
     return matchesSearch && matchesTipo;
   });
 
-  const tipos = ['Todos', ...new Set(perifericos.map(p => p.tipo))];
+  const tipos = ['Todos', ...new Set(availablePerifericos.map(p => p.tipo))];
 
   if (loading) return <Layout><div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div></Layout>;
 
@@ -127,7 +172,7 @@ const InventarioPerifericosPage = () => {
                 <div className="flex-1">
                   <input
                     type="text"
-                    placeholder="Buscar por nombre..."
+                    placeholder="Buscar por tipo..."
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -148,7 +193,7 @@ const InventarioPerifericosPage = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left">
+                      <th className="px-6 py-3 text-left w-10">
                         <input
                           type="checkbox"
                           checked={selectedIds.length === filteredPerifericos.length && filteredPerifericos.length > 0}
@@ -156,37 +201,56 @@ const InventarioPerifericosPage = () => {
                           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periférico</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de Periférico</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado Técnico</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredPerifericos.map(p => (
-                      <tr
-                        key={p.id}
-                        className={`hover:bg-blue-50 cursor-pointer transition-colors ${selectedIds.includes(p.id) ? 'bg-blue-50' : ''}`}
-                        onClick={() => handleToggleSelect(p.id)}
-                      >
-                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(p.id)}
-                            onChange={() => handleToggleSelect(p.id)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">{p.nombre}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">{p.tipo}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">{p.estado_tecnico}</span>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredPerifericos.map(p => {
+                      const isAlreadyHeld = empleadoPerifericos.includes(p.tipo);
+                      const isAnotherOfSameTypeSelected = !selectedIds.includes(p.id) && selectedIds.some(id => {
+                        const sel = availablePerifericos.find(item => item.id === id);
+                        return sel?.tipo === p.tipo;
+                      });
+
+                      return (
+                        <tr
+                          key={p.id}
+                          className={`hover:bg-blue-50 cursor-pointer transition-all ${selectedIds.includes(p.id) ? 'bg-blue-50' : ''} ${isAlreadyHeld ? 'opacity-50 grayscale bg-gray-50' : ''}`}
+                          onClick={() => handleToggleSelect(p.id)}
+                        >
+                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(p.id)}
+                              disabled={isAlreadyHeld}
+                              onChange={() => handleToggleSelect(p.id)}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 disabled:opacity-30"
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <div className="text-sm font-bold text-gray-900">{p.nombre}</div>
+                              {isAlreadyHeld && (
+                                <span className="text-[10px] text-red-500 font-medium italic">
+                                  El colaborador ya tiene este tipo
+                                </span>
+                              )}
+                              {isAnotherOfSameTypeSelected && !isAlreadyHeld && (
+                                <span className="text-[10px] text-amber-500 font-medium italic">
+                                  Solo uno por tipo
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs font-semibold rounded ${p.estado_tecnico === 'Funcional' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {p.estado_tecnico}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {filteredPerifericos.length === 0 && (
@@ -217,10 +281,10 @@ const InventarioPerifericosPage = () => {
                     </div>
                     {selectedIds.length > 0 && (
                       <div className="max-h-40 overflow-y-auto space-y-1 mt-2">
-                        {perifericos.filter(p => selectedIds.includes(p.id)).map(p => (
+                        {availablePerifericos.filter(p => selectedIds.includes(p.id)).map(p => (
                           <div key={p.id} className="text-xs text-gray-500 flex justify-between">
                             <span>{p.nombre}</span>
-                            <span className="text-gray-400">{p.tipo}</span>
+                            <span className="text-gray-400 font-medium">{p.tipo}</span>
                           </div>
                         ))}
                       </div>
@@ -231,14 +295,14 @@ const InventarioPerifericosPage = () => {
                     onClick={handleAssign}
                     disabled={submitting || selectedIds.length === 0 || !selectedEmpleadoId}
                     className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-lg ${submitting || selectedIds.length === 0 || !selectedEmpleadoId
-                        ? 'bg-gray-300 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 transform hover:-translate-y-1'
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 transform hover:-translate-y-1'
                       }`}
                   >
                     {submitting ? 'Asignando...' : `Asignar ${selectedIds.length} periféricos`}
                   </button>
                   <p className="text-[10px] text-gray-400 mt-4 text-center text-balance italic">
-                    Esta acción actualizará los estados y registrará el movimiento en el historial.
+                    Regla: Solo se permite un periférico de cada tipo por colaborador.
                   </p>
                 </div>
               </div>

@@ -140,7 +140,7 @@ class PasisalvoSerializer(serializers.ModelSerializer):
         read_only_fields = ['fecha_generacion', 'estado', 'detalles_pendientes', 'colaborador_username', 'generado_por_username']
 
 class HistorialPerifericoSerializer(serializers.ModelSerializer):
-    periferico_nombre = serializers.CharField(source='periferico.nombre', read_only=True)
+    periferico_nombre = serializers.CharField(read_only=True)
     empleado_nombre = serializers.SerializerMethodField()
     
     class Meta:

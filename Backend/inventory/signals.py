@@ -1,5 +1,5 @@
 from django.utils import timezone
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch import receiver
 from .models import Equipo, HistorialEquipo, Periferico, HistorialPeriferico
 from .middleware import get_current_user
@@ -117,3 +117,22 @@ def log_periferico_assignment(sender, instance, created, **kwargs):
             empleado_asignado=old_instance.empleado_asignado,
             fecha_devolucion__isnull=True
         ).update(fecha_devolucion=timezone.now(), observacion_devolucion="Devolución automática")
+
+@receiver(pre_delete, sender=Periferico)
+def log_periferico_baja(sender, instance, **kwargs):
+    # Si estaba asignado a alguien, marcamos la devolución
+    if instance.empleado_asignado:
+        HistorialPeriferico.objects.filter(
+            periferico=instance, 
+            empleado_asignado=instance.empleado_asignado,
+            fecha_devolucion__isnull=True
+        ).update(fecha_devolucion=timezone.now(), observacion_devolucion="Devolución por baja del elemento")
+    
+    # Creamos un registro final de baja
+    HistorialPeriferico.objects.create(
+        periferico=instance,
+        periferico_nombre=instance.nombre,
+        es_baja=True,
+        fecha_baja=timezone.now(),
+        observacion_devolucion="SISTEMA: PERIFÉRICO DADO DE BAJA"
+    )

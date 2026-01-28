@@ -21,7 +21,6 @@ const ESTADO_TECNICO_CHOICES = [
 
 const RegistrarPerifericoPage = () => {
     const router = useRouter();
-    const [nombre, setNombre] = useState('');
     const [tipo, setTipo] = useState('Mouse');
     const [estadoTecnico, setEstadoTecnico] = useState('Funcional');
     const [notas, setNotas] = useState('');
@@ -34,7 +33,7 @@ const RegistrarPerifericoPage = () => {
         setError(null);
 
         const peripheralData: any = {
-            nombre,
+            nombre: tipo, // El nombre ahora es igual al tipo
             tipo,
             estado_tecnico: estadoTecnico,
             notas,
@@ -68,17 +67,7 @@ const RegistrarPerifericoPage = () => {
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
                     {error && <div className="mb-4 text-red-500">{error}</div>}
 
-                    <div className="mb-4">
-                        <label htmlFor="nombre" className="block text-gray-700 font-bold mb-2">Nombre</label>
-                        <input
-                            type="text"
-                            id="nombre"
-                            value={nombre}
-                            onChange={(e) => setNombre(e.target.value)}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            required
-                        />
-                    </div>
+
 
                     <div className="mb-4">
                         <label htmlFor="tipo" className="block text-gray-700 font-bold mb-2">Tipo de Periférico</label>

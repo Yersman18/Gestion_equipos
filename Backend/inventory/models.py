@@ -157,12 +157,20 @@ class HistorialPeriferico(models.Model):
     """
     Modelo para registrar el historial de asignación de periféricos.
     """
-    periferico = models.ForeignKey(Periferico, on_delete=models.CASCADE, related_name='historial')
+    periferico = models.ForeignKey(Periferico, on_delete=models.SET_NULL, null=True, blank=True, related_name='historial')
+    periferico_nombre = models.CharField(max_length=200, null=True, blank=True, verbose_name="Nombre del Periférico (Histórico)")
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Empleado Asignado")
     equipo_asociado = models.ForeignKey(Equipo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Equipo Asociado en la Entrega")
     fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Asignación")
     fecha_devolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Devolución")
     observacion_devolucion = models.TextField(blank=True, null=True, verbose_name="Observación de Devolución")
+    es_baja = models.BooleanField(default=False, verbose_name="Fue dado de baja")
+    fecha_baja = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Baja")
+
+    def save(self, *args, **kwargs):
+        if self.periferico and not self.periferico_nombre:
+            self.periferico_nombre = self.periferico.nombre
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Historial de Periférico"

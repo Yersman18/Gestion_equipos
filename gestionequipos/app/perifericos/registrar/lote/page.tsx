@@ -21,7 +21,6 @@ const ESTADO_TECNICO_CHOICES = [
 
 const RegistrarPerifericosEnLotePage = () => {
     const router = useRouter();
-    const [nombreBase, setNombreBase] = useState('');
     const [cantidad, setCantidad] = useState(1);
     const [tipo, setTipo] = useState('Mouse');
     const [estadoTecnico, setEstadoTecnico] = useState('Funcional');
@@ -45,7 +44,7 @@ const RegistrarPerifericosEnLotePage = () => {
         const requests = [];
         for (let i = 1; i <= cantidad; i++) {
             const peripheralData = {
-                nombre: `${nombreBase} - ${i}`,
+                nombre: `${tipo} - ${i}`,
                 tipo,
                 estado_tecnico: estadoTecnico,
                 notas,
@@ -78,23 +77,12 @@ const RegistrarPerifericosEnLotePage = () => {
         <Layout>
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-3xl font-bold mb-6">Registrar Periféricos en Lote</h1>
-                
+
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
                     {error && <div className="mb-4 text-red-500 bg-red-100 p-3 rounded">{error}</div>}
                     {successMessage && <div className="mb-4 text-green-700 bg-green-100 p-3 rounded">{successMessage}</div>}
 
-                    <div className="mb-4">
-                        <label htmlFor="nombreBase" className="block text-gray-700 font-bold mb-2">Nombre Base</label>
-                        <input
-                            type="text"
-                            id="nombreBase"
-                            value={nombreBase}
-                            onChange={(e) => setNombreBase(e.target.value)}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            placeholder="Ej: Mouse Dell USB"
-                            required
-                        />
-                    </div>
+
 
                     <div className="mb-4">
                         <label htmlFor="cantidad" className="block text-gray-700 font-bold mb-2">Cantidad</label>
