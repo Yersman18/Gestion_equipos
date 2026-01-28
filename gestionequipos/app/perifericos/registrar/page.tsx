@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
-import { EmpleadoSelector } from '@/components/EmpleadoSelector';
 
 const TIPO_PERIFERICO_CHOICES = [
     { value: 'Mouse', label: 'Mouse' },
@@ -26,7 +25,6 @@ const RegistrarPerifericoPage = () => {
     const [tipo, setTipo] = useState('Mouse');
     const [estadoTecnico, setEstadoTecnico] = useState('Funcional');
     const [notas, setNotas] = useState('');
-    const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | ''>('');
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -40,12 +38,8 @@ const RegistrarPerifericoPage = () => {
             tipo,
             estado_tecnico: estadoTecnico,
             notas,
-            estado_disponibilidad: selectedEmpleadoId ? 'Asignado' : 'Disponible',
+            estado_disponibilidad: 'Disponible',
         };
-
-        if (selectedEmpleadoId) {
-            peripheralData.empleado_asignado = selectedEmpleadoId;
-        }
 
         try {
             await fetchAuthenticated('/api/perifericos/', {
@@ -70,7 +64,7 @@ const RegistrarPerifericoPage = () => {
         <Layout>
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-3xl font-bold mb-6">Registrar Nuevo Periférico</h1>
-                
+
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
                     {error && <div className="mb-4 text-red-500">{error}</div>}
 
@@ -112,14 +106,6 @@ const RegistrarPerifericoPage = () => {
                                 <option key={option.value} value={option.value}>{option.label}</option>
                             ))}
                         </select>
-                    </div>
-
-                    <div className="mb-4">
-                        <EmpleadoSelector
-                            selectedEmpleadoId={selectedEmpleadoId}
-                            onSelectEmpleado={setSelectedEmpleadoId}
-                            onEmpleadoChange={() => {}} // No necesitamos hacer nada aquí para el registro
-                        />
                     </div>
 
                     <div className="mb-6">

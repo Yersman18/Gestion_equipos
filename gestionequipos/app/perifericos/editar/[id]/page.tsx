@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated, ApiError } from '@/app/utils/api';
-import { EmpleadoSelector } from '@/components/EmpleadoSelector';
 
 const TIPO_PERIFERICO_CHOICES = [
     'Mouse', 'Teclado', 'Base', 'Cargador', 'Monitor', 'Otro'
@@ -18,7 +17,6 @@ interface PerifericoData {
     estado_tecnico: string;
     estado_disponibilidad: string;
     notas: string;
-    empleado_asignado: number | '' | null;
 }
 
 const EditarPerifericoPage = () => {
@@ -27,7 +25,6 @@ const EditarPerifericoPage = () => {
     const { id } = params;
 
     const [formData, setFormData] = useState<PerifericoData | null>(null);
-    const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | ''>('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -37,10 +34,12 @@ const EditarPerifericoPage = () => {
         try {
             const data = await fetchAuthenticated(`/api/perifericos/${id}/`);
             setFormData({
-                ...data,
-                empleado_asignado: data.empleado_asignado || '',
+                nombre: data.nombre,
+                tipo: data.tipo,
+                estado_tecnico: data.estado_tecnico,
+                estado_disponibilidad: data.estado_disponibilidad,
+                notas: data.notas || '',
             });
-            setSelectedEmpleadoId(data.empleado_asignado || '');
         } catch (err) {
             if (err instanceof ApiError && err.status === 404) {
                 setError('El periférico no fue encontrado. Es posible que haya sido eliminado.');
@@ -63,34 +62,16 @@ const EditarPerifericoPage = () => {
         setFormData(prev => prev ? { ...prev, [name]: value } : null);
     };
 
-    const handleEmpleadoSelect = (empleadoId: number | '') => {
-        setSelectedEmpleadoId(empleadoId);
-        setFormData(prev => {
-            if (!prev) return null;
-            const newEstadoDisponibilidad = empleadoId ? 'Asignado' : 'Disponible';
-            return { 
-                ...prev, 
-                empleado_asignado: empleadoId,
-                estado_disponibilidad: newEstadoDisponibilidad 
-            };
-        });
-    };
-
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!formData || !id) return;
         setSubmitting(true);
         setError(null);
 
-        const dataToSubmit = {
-            ...formData,
-            empleado_asignado: selectedEmpleadoId || null,
-        };
-
         try {
             await fetchAuthenticated(`/api/perifericos/${id}/`, {
                 method: 'PUT',
-                body: JSON.stringify(dataToSubmit),
+                body: JSON.stringify(formData),
             });
             router.push('/perifericos');
         } catch (err) {
@@ -107,7 +88,7 @@ const EditarPerifericoPage = () => {
     };
 
     if (loading) return <Layout><div className="text-center py-10">Cargando...</div></Layout>;
-    
+
     if (error) return (
         <Layout>
             <div className="container mx-auto px-4 py-8 text-center">
@@ -143,7 +124,7 @@ const EditarPerifericoPage = () => {
         <Layout>
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-3xl font-bold mb-6">Editar Periférico</h1>
-                
+
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
                     {error && (
                         <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -172,15 +153,6 @@ const EditarPerifericoPage = () => {
                                 {ESTADO_TECNICO_CHOICES.map(op => <option key={op} value={op}>{op}</option>)}
                             </select>
                         </div>
-                    </div>
-
-                    
-                    <div className="mb-4">
-                        <EmpleadoSelector
-                            selectedEmpleadoId={selectedEmpleadoId}
-                            onSelectEmpleado={handleEmpleadoSelect}
-                            onEmpleadoChange={() => {}}
-                        />
                     </div>
 
                     <div className="mb-6">
