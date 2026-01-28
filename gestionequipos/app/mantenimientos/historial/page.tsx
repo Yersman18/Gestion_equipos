@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 interface Mantenimiento {
   id: number;
   equipo_asociado_nombre: string;
+  equipo_tipo?: string;
   usuario_responsable_username: string;
   tipo_mantenimiento: string;
   estado_mantenimiento: string;
@@ -26,7 +27,11 @@ const HistorialMantenimientosPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
-  
+  const [filterEstado, setFilterEstado] = useState('todos');
+  const [filterEquipoTipo, setFilterEquipoTipo] = useState('todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const router = useRouter();
@@ -41,19 +46,13 @@ const HistorialMantenimientosPage: React.FC = () => {
       return;
     }
 
-    if (!sedeActiva && !useAuth().user?.is_superuser) {
-      setMantenimientos([]);
-      setLoading(false);
-      return;
-    }
-
     const fetchMantenimientos = async () => {
       setLoading(true);
       setError(null);
-      
+
       const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`);
-      url.searchParams.append('estado_mantenimiento', 'Finalizado');
-      
+      // Eliminamos el hardcode de 'Finalizado' para permitir filtrar por cualquier estado
+
       if (sedeActiva) {
         url.searchParams.append('sede', String(sedeActiva.id));
       }
@@ -83,10 +82,33 @@ const HistorialMantenimientosPage: React.FC = () => {
 
   // Filtrar mantenimientos
   const mantenimientosFiltrados = mantenimientos.filter(m => {
-    const matchSearch = m.equipo_asociado_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       m.usuario_responsable_username?.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchSearch = m.equipo_asociado_nombre?.toLowerCase().includes(search) ||
+      m.usuario_responsable_username?.toLowerCase().includes(search);
+
     const matchTipo = filterTipo === 'todos' || m.tipo_mantenimiento === filterTipo;
-    return matchSearch && matchTipo;
+    const matchEstado = filterEstado === 'todos' || m.estado_mantenimiento === filterEstado;
+    const matchEquipoTipo = filterEquipoTipo === 'todos' || m.equipo_tipo === filterEquipoTipo;
+
+    // Filtrado por fechas
+    let matchDate = true;
+    if (startDate || endDate) {
+      const fechaMaint = new Date(m.fecha_inicio);
+      fechaMaint.setHours(0, 0, 0, 0);
+
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (fechaMaint < start) matchDate = false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (fechaMaint > end) matchDate = false;
+      }
+    }
+
+    return matchSearch && matchTipo && matchEstado && matchEquipoTipo && matchDate;
   });
 
   // Función para obtener el color del badge según el tipo
@@ -99,26 +121,26 @@ const HistorialMantenimientosPage: React.FC = () => {
     return badges[tipo] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
+  const getEstadoBadge = (estado: string) => {
+    const badges: { [key: string]: string } = {
+      'Pendiente': 'bg-amber-100 text-amber-700 border-amber-200',
+      'En proceso': 'bg-blue-100 text-blue-700 border-blue-200',
+      'Finalizado': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      'Cancelado': 'bg-red-100 text-red-700 border-red-200',
+    };
+    return badges[estado] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  // Obtener tipos de equipo únicos para el filtro
+  const equiposTipos = Array.from(new Set(mantenimientos.map(m => m.equipo_tipo).filter(Boolean)));
+
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full py-20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-green-500 mx-auto mb-4"></div>
-            <p className="text-gray-600 font-semibold text-lg">Cargando historial...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (error) {
-    return (
-      <Layout>
-        <div className="bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg p-6 shadow-lg">
-          <div className="flex items-center">
-            <span className="text-3xl mr-3">⚠️</span>
-            <p className="text-red-700 font-semibold">Error: {error}</p>
+            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600 font-semibold text-lg">Cargando registros...</p>
           </div>
         </div>
       </Layout>
@@ -134,200 +156,203 @@ const HistorialMantenimientosPage: React.FC = () => {
           <h1 className="text-3xl font-black text-gray-800">Historial de Mantenimientos</h1>
         </div>
         <p className="text-gray-600 ml-14">
-            {sedeActiva
-                ? `Historial de mantenimientos finalizados para la sede: ${sedeActiva.nombre}`
-                : 'Historial de todos los mantenimientos finalizados (Vista de Superusuario)'}
+          {sedeActiva
+            ? `Seguimiento de todos los mantenimientos para la sede: ${sedeActiva.nombre}`
+            : 'Vista global de mantenimientos (Superusuario)'}
         </p>
       </div>
 
-      {/* Barra de búsqueda y filtros */}
-      <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Panel de Filtros Avanzado */}
+      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Búsqueda */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="🔍 Buscar por equipo o responsable..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-            />
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Búsqueda General</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Equipo, responsable..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all pl-10"
+              />
+              <span className="absolute left-3 top-3.5 text-gray-400">🔍</span>
+            </div>
           </div>
 
-          {/* Filtro por tipo */}
-          <div className="relative">
+          {/* Filtro Estado */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Estado</label>
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          {/* Filtro Tipo Mantenimiento */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Tipo Maint.</label>
             <select
               value={filterTipo}
               onChange={(e) => setFilterTipo(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-white cursor-pointer"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
             >
-              <option value="todos">📊 Todos los tipos</option>
-              <option value="Preventivo">🔍 Preventivo</option>
-              <option value="Correctivo">🔧 Correctivo</option>
+              <option value="todos">Todos los tipos</option>
+              <option value="Preventivo">Preventivo</option>
+              <option value="Correctivo">Correctivo</option>
             </select>
           </div>
-        </div>
 
-        {/* Contador de resultados */}
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <span>
-            Mostrando <span className="font-bold text-green-600">{mantenimientosFiltrados.length}</span> de <span className="font-bold">{mantenimientos.length}</span> registros
-          </span>
-          {(searchTerm || filterTipo !== 'todos') && (
+          {/* Filtro Tipo Equipo */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Tipo de Equipo</label>
+            <select
+              value={filterEquipoTipo}
+              onChange={(e) => setFilterEquipoTipo(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer"
+            >
+              <option value="todos">Todos los equipos</option>
+              {equiposTipos.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Rango de Fechas */}
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Rango de Fechas (Inicio)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+              />
+              <span className="text-gray-400">al</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Botón Limpiar */}
+          <div className="flex items-end">
             <button
               onClick={() => {
                 setSearchTerm('');
                 setFilterTipo('todos');
+                setFilterEstado('todos');
+                setFilterEquipoTipo('todos');
+                setStartDate('');
+                setEndDate('');
               }}
-              className="text-red-600 hover:text-red-700 font-semibold"
+              className="w-full py-3 px-4 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 font-bold rounded-xl transition-all flex items-center justify-center gap-2"
             >
-              Limpiar filtros ✖️
+              <span>🔄</span> Borrar Filtros
             </button>
-          )}
+          </div>
+        </div>
+
+        {/* Resumen de resultados */}
+        <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between text-sm">
+          <p className="text-gray-500">
+            Se encontraron <span className="font-bold text-blue-600">{mantenimientosFiltrados.length}</span> registros que coinciden con tu búsqueda.
+          </p>
         </div>
       </div>
 
-      {/* Contenido principal */}
+      {/* Listado de Tarjetas */}
       {mantenimientosFiltrados.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {mantenimientosFiltrados.map((m) => (
-            <div key={m.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group">
-              {/* Header de la tarjeta */}
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold text-lg mb-1">{m.equipo_asociado_nombre}</h3>
-                    <p className="text-white/90 text-sm">Mantenimiento Finalizado ✓</p>
+            <div key={m.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
+              {/* Header */}
+              <div className={`p-4 ${m.estado_mantenimiento === 'Finalizado' ? 'bg-emerald-500' :
+                m.estado_mantenimiento === 'Pendiente' ? 'bg-amber-500' :
+                  m.estado_mantenimiento === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                <div className="flex justify-between items-start text-white">
+                  <div>
+                    <h3 className="font-bold text-lg leading-tight">{m.equipo_asociado_nombre}</h3>
+                    <p className="text-white/80 text-xs mt-1 font-medium">{m.equipo_tipo || 'Equipo'}</p>
                   </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                    <span className="text-2xl">✅</span>
-                  </div>
+                  <span className="text-2xl bg-white/20 p-2 rounded-lg">
+                    {m.estado_mantenimiento === 'Finalizado' ? '✅' :
+                      m.estado_mantenimiento === 'Pendiente' ? '⏳' :
+                        m.estado_mantenimiento === 'Cancelado' ? '❌' : '⚙️'}
+                  </span>
                 </div>
               </div>
 
-              {/* Contenido de la tarjeta */}
-              <div className="p-5 space-y-3">
-                {/* Responsable */}
-                <div className="flex items-center text-sm">
-                  <span className="text-gray-500 font-medium w-28">Responsable:</span>
-                  <span className="text-gray-800 font-semibold">
-                    {m.usuario_responsable_username ? (
-                      <span>👤 {m.usuario_responsable_username}</span>
-                    ) : (
-                      <span className="text-gray-400 italic">No asignado</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Tipo */}
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-xs text-gray-500 font-medium">Tipo:</span>
-                  <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getTipoBadge(m.tipo_mantenimiento)}`}>
+              {/* Body */}
+              <div className="p-5 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getTipoBadge(m.tipo_mantenimiento)}`}>
                     {m.tipo_mantenimiento}
                   </span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getEstadoBadge(m.estado_mantenimiento)}`}>
+                    {m.estado_mantenimiento}
+                  </span>
                 </div>
 
-                {/* Fechas */}
-                <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center text-sm">
-                    <span className="text-gray-500 font-medium w-28">Inicio:</span>
-                    <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded text-xs">
-                      📅 {new Date(m.fecha_inicio).toLocaleDateString('es-ES', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric',
-                        timeZone: 'UTC'
-                      })}
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-24 font-medium">Responsable:</span>
+                    <span className="font-bold text-gray-800">👤 {m.usuario_responsable_username || 'Sin asignar'}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <span className="w-24 font-medium">Fecha Inicio:</span>
+                    <span className="font-mono text-xs bg-gray-50 px-2 py-1 rounded">
+                      📅 {new Date(m.fecha_inicio).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                     </span>
                   </div>
-                  <div className="flex items-center text-sm">
-                    <span className="text-gray-500 font-medium w-28">Finalización:</span>
-                    <span className="text-gray-800 font-mono bg-green-100 px-2 py-1 rounded text-xs">
-                      🏁 {m.fecha_finalizacion 
-                        ? new Date(m.fecha_finalizacion).toLocaleDateString('es-ES', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })
-                        : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Duración */}
-                {m.fecha_finalizacion && (
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-blue-700 font-medium">⏱️ Duración:</span>
-                      <span className="text-blue-800 font-bold">
-                        {Math.ceil((new Date(m.fecha_finalizacion).getTime() - new Date(m.fecha_inicio).getTime()) / (1000 * 60 * 60 * 24))} días
+                  {m.fecha_finalizacion && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <span className="w-24 font-medium">Finalizado:</span>
+                      <span className="font-mono text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded">
+                        🏁 {new Date(m.fecha_finalizacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                       </span>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              {/* Footer con acciones */}
-              <div className="bg-gray-50 px-5 py-3 flex justify-end gap-2">
-                {m.evidencia_finalizacion_url && (
-                  <a
-                    href={m.evidencia_finalizacion_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-teal-500 hover:bg-teal-600 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
-                    title={m.evidencia_finalizacion_filename || 'Ver evidencia'}
+                {/* Footer Buttons */}
+                <div className="pt-4 border-t border-gray-50 flex gap-2">
+                  {m.evidencia_finalizacion_url && (
+                    <a
+                      href={m.evidencia_finalizacion_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-xs font-bold text-center transition-all flex items-center justify-center gap-1"
+                    >
+                      📄 Evidencia
+                    </a>
+                  )}
+                  <Link
+                    href={`/mantenimientos/editar/${m.id}?view=true`}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold text-center transition-all flex items-center justify-center gap-1"
                   >
-                    <span>📄</span>
-                    <span>Ver Evidencia</span>
-                  </a>
-                )}
-                <Link 
-                  href={`/mantenimientos/editar/${m.id}?view=true`} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
-                >
-                  <span>👁️</span>
-                  <span>Ver Detalles</span>
-                </Link>
+                    👁️ Ver más
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-gray-400 rounded-lg p-8 shadow-lg text-center">
-          <span className="text-5xl mb-4 block">📋</span>
-          <p className="text-gray-700 font-semibold text-lg">
-            {mantenimientos.length === 0 && !loading
-              ? 'No hay mantenimientos finalizados en el historial para la sede actual.'
-              : 'No se encontraron mantenimientos con los filtros aplicados.'}
-          </p>
-        </div>
-      )}
-
-      {/* Estadísticas del historial */}
-      {mantenimientos.length > 0 && (
-        <div className="mt-8 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-          <h3 className="text-gray-800 font-bold text-lg mb-4 flex items-center">
-            <span className="text-2xl mr-2">📊</span>
-            Estadísticas del Historial
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-              <div className="text-3xl font-bold text-purple-600">
-                {mantenimientos.filter(m => m.tipo_mantenimiento === 'Preventivo').length}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">Preventivos</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
-              <div className="text-3xl font-bold text-orange-600">
-                {mantenimientos.filter(m => m.tipo_mantenimiento === 'Correctivo').length}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">Correctivos</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-              <div className="text-3xl font-bold text-green-600">{mantenimientos.length}</div>
-              <div className="text-sm text-gray-600 mt-1">Total Completados</div>
-            </div>
-          </div>
+        <div className="bg-white rounded-3xl p-20 text-center border-2 border-dashed border-gray-200">
+          <div className="text-6xl mb-4">🔍</div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">No se encontraron resultados</h3>
+          <p className="text-gray-500">Intenta ajustar los filtros para encontrar lo que buscas.</p>
         </div>
       )}
     </Layout>

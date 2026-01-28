@@ -7,6 +7,7 @@ import { fetchAuthenticated } from '@/app/utils/api';
 interface HistorialPeriferico {
   id: number;
   periferico_nombre: string;
+  periferico_tipo: string;
   empleado_nombre: string;
   fecha_asignacion: string;
   fecha_devolucion: string | null;
@@ -19,6 +20,13 @@ const HistorialPerifericosPage = () => {
   const [historial, setHistorial] = useState<HistorialPeriferico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados para filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTipo, setFilterTipo] = useState('todos');
+  const [filterEstado, setFilterEstado] = useState('todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const fetchHistorial = async () => {
@@ -34,81 +42,221 @@ const HistorialPerifericosPage = () => {
     fetchHistorial();
   }, []);
 
+  // Obtener tipos únicos de periféricos para el filtro
+  const tiposPerifericos = Array.from(new Set(historial.map(h => h.periferico_tipo).filter(Boolean)));
+
+  // Lógica de filtrado
+  const historialFiltrado = historial.filter(h => {
+    const search = searchTerm.toLowerCase();
+    const matchSearch = (h.periferico_nombre?.toLowerCase() || '').includes(search) ||
+      (h.empleado_nombre?.toLowerCase() || '').includes(search);
+
+    const matchTipo = filterTipo === 'todos' || h.periferico_tipo === filterTipo;
+
+    // Filtrado por estado (Baja o No Baja)
+    let matchEstado = true;
+    if (filterEstado === 'baja') matchEstado = h.es_baja;
+    if (filterEstado === 'activo') matchEstado = !h.es_baja && !h.fecha_devolucion;
+    if (filterEstado === 'devuelto') matchEstado = !h.es_baja && !!h.fecha_devolucion;
+
+    // Filtrado por fechas
+    let matchDate = true;
+    if (startDate || endDate) {
+      const fechaAsig = new Date(h.fecha_asignacion);
+      fechaAsig.setHours(0, 0, 0, 0);
+
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        if (fechaAsig < start) matchDate = false;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        if (fechaAsig > end) matchDate = false;
+      }
+    }
+
+    return matchSearch && matchTipo && matchEstado && matchDate;
+  });
+
   if (loading) return <Layout><div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div></Layout>;
 
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Historial de Movimientos</h1>
-          <p className="text-gray-500">Registro histórico de entregas, devoluciones y bajas de periféricos.</p>
+          <h1 className="text-3xl font-bold text-gray-800">Historial de Movimientos de Periféricos</h1>
+          <p className="text-gray-500">Consulta asignaciones, devoluciones y bajas históricas.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Panel de Filtros */}
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Buscador */}
+            <div className="lg:col-span-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Búsqueda</label>
+              <input
+                type="text"
+                placeholder="Nombre de periférico o colaborador..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+              />
+            </div>
+
+            {/* Tipo Periférico */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tipo Periférico</label>
+              <select
+                value={filterTipo}
+                onChange={(e) => setFilterTipo(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm cursor-pointer"
+              >
+                <option value="todos">Todos los tipos</option>
+                {tiposPerifericos.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Estado</label>
+              <select
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm cursor-pointer"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="activo">En posesión</option>
+                <option value="devuelto">Devuelto</option>
+                <option value="baja">Dado de baja</option>
+              </select>
+            </div>
+
+            {/* Rango Fechas */}
+            <div className="lg:col-span-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Rango de Fecha de Asignación</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                />
+                <span className="text-gray-400">al</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Botón Reset */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterTipo('todos');
+                  setFilterEstado('todos');
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-lg transition-all text-sm"
+              >
+                🔄 Limpiar Filtros
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 text-[11px] text-gray-400 font-medium">
+            Mostrando {historialFiltrado.length} de {historial.length} registros totales.
+          </div>
+        </div>
+
+        {/* Tabla */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periférico</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Colaborador / Evento</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Movimiento</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalles / Cierre</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Periférico</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Colaborador / Evento</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">F. Asignación</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cierre</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {historial.map((h) => (
-                  <tr key={h.id} className={`hover:bg-gray-50 transition-colors ${h.es_baja ? 'bg-red-50/30' : ''}`}>
+                {historialFiltrado.map((h) => (
+                  <tr key={h.id} className={`hover:bg-gray-50 transition-colors ${h.es_baja ? 'bg-red-50/20' : ''}`}>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-bold text-gray-900">{h.periferico_nombre}</div>
+                      <div className="text-sm font-bold text-gray-900 leading-tight">{h.periferico_nombre}</div>
+                      <div className="text-[10px] text-gray-400 font-medium uppercase">{h.periferico_tipo}</div>
                     </td>
                     <td className="px-6 py-4">
                       {h.es_baja ? (
-                        <div className="text-sm font-bold text-red-600 uppercase">Eliminación Definitiva</div>
+                        <div className="text-xs font-black text-red-600 uppercase tracking-tighter">Baja del Sistema</div>
                       ) : (
-                        <div className="text-sm text-gray-700">{h.empleado_nombre}</div>
+                        <div className="text-sm text-gray-700 font-medium">{h.empleado_nombre}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600">
-                        {new Date(h.fecha_asignacion).toLocaleDateString()} {new Date(h.fecha_asignacion).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div className="text-sm text-gray-600 font-mono">
+                        {new Date(h.fecha_asignacion).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {h.es_baja ? (
-                        <span className="px-2 py-1 text-[10px] font-bold uppercase rounded bg-red-100 text-red-700 border border-red-200">De Baja</span>
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-red-100 text-red-700">De Baja</span>
+                      ) : h.fecha_devolucion ? (
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-emerald-100 text-emerald-700">Completo</span>
                       ) : (
-                        <span className="px-2 py-1 text-[10px] font-bold uppercase rounded bg-blue-100 text-blue-700">Asignación</span>
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-blue-100 text-blue-700 shadow-sm animate-pulse-subtle">Vigente</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-xs">
                       {h.es_baja ? (
                         <div className="flex flex-col">
-                          <span className="text-red-700 font-bold">Retirado: {h.fecha_baja ? new Date(h.fecha_baja).toLocaleDateString() : 'N/A'}</span>
-                          <span className="text-xs italic">"{h.observacion_devolucion}"</span>
+                          <span className="text-red-700 font-bold">Retiro: {h.fecha_baja ? new Date(h.fecha_baja).toLocaleDateString() : 'N/A'}</span>
+                          <span className="text-[10px] italic text-gray-400">"{h.observacion_devolucion}"</span>
                         </div>
                       ) : h.fecha_devolucion ? (
                         <div className="flex flex-col">
-                          <span className="text-emerald-600 font-medium">Devuelto: {new Date(h.fecha_devolucion).toLocaleDateString()}</span>
-                          {h.observacion_devolucion && <span className="text-xs italic">"{h.observacion_devolucion}"</span>}
+                          <span className="text-emerald-700 font-bold">Devuelto: {new Date(h.fecha_devolucion).toLocaleDateString()}</span>
+                          {h.observacion_devolucion && <span className="text-[10px] italic text-gray-400">"{h.observacion_devolucion}"</span>}
                         </div>
                       ) : (
-                        <span className="text-amber-600 font-medium italic">Vigente / En posesión</span>
+                        <span className="text-blue-500 font-bold italic">En posesión</span>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {historial.length === 0 && (
+            {historialFiltrado.length === 0 && (
               <div className="text-center py-20 text-gray-500 bg-white">
-                <p className="text-lg font-medium">No hay registros de historial aún.</p>
-                <p className="text-sm">Las asignaciones o bajas aparecerán aquí.</p>
+                <div className="text-5xl mb-4 text-gray-200">🗃️</div>
+                <p className="text-lg font-bold">No se encontraron movimientos</p>
+                <p className="text-sm">Ajusta los filtros de búsqueda.</p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+      `}</style>
     </Layout>
   );
 };

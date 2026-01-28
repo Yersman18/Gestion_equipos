@@ -58,6 +58,7 @@ class MantenimientoSerializer(serializers.ModelSerializer):
     """
     # Campos anidados para información relacionada
     equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True, allow_null=True)
+    equipo_tipo = serializers.CharField(source='equipo.tipo_equipo', read_only=True, allow_null=True)
     responsable_nombre = serializers.SerializerMethodField()
     sede_nombre = serializers.CharField(source='sede.nombre', read_only=True, allow_null=True)
     
@@ -106,7 +107,7 @@ class MantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mantenimiento
         fields = [
-            'id', 'equipo', 'equipo_nombre', 'equipo_asociado_nombre', 'sede', 'sede_nombre',
+            'id', 'equipo', 'equipo_nombre', 'equipo_tipo', 'equipo_asociado_nombre', 'sede', 'sede_nombre',
             'responsable', 'responsable_nombre', 'usuario_responsable_username',
             'tipo_mantenimiento', 'estado_mantenimiento',
             'fecha_inicio', 'fecha_finalizacion',

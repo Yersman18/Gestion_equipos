@@ -159,6 +159,7 @@ class HistorialPeriferico(models.Model):
     """
     periferico = models.ForeignKey(Periferico, on_delete=models.SET_NULL, null=True, blank=True, related_name='historial')
     periferico_nombre = models.CharField(max_length=200, null=True, blank=True, verbose_name="Nombre del Periférico (Histórico)")
+    periferico_tipo = models.CharField(max_length=50, null=True, blank=True, verbose_name="Tipo de Periférico (Histórico)")
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Empleado Asignado")
     equipo_asociado = models.ForeignKey(Equipo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Equipo Asociado en la Entrega")
     fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Asignación")
@@ -168,8 +169,11 @@ class HistorialPeriferico(models.Model):
     fecha_baja = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Baja")
 
     def save(self, *args, **kwargs):
-        if self.periferico and not self.periferico_nombre:
-            self.periferico_nombre = self.periferico.nombre
+        if self.periferico:
+            if not self.periferico_nombre:
+                self.periferico_nombre = self.periferico.nombre
+            if not self.periferico_tipo:
+                self.periferico_tipo = self.periferico.tipo
         super().save(*args, **kwargs)
 
     class Meta:
