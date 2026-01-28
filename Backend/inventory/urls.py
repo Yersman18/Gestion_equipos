@@ -7,7 +7,8 @@ from .views import (
     PerifericoListCreateAPIView, PerifericoRetrieveUpdateDestroyAPIView,
     LicenciaListCreateAPIView, LicenciaRetrieveUpdateDestroyAPIView,
     PasisalvoListCreateAPIView, PasisalvoRetrieveUpdateDestroyAPIView,
-    DashboardStatsView, HistorialPerifericoListAPIView, HistorialEquipoListView, HistorialMovimientoEquipoListAPIView
+    DashboardStatsView, HistorialPerifericoListAPIView, HistorialEquipoListView, HistorialMovimientoEquipoListAPIView,
+    clearance_info
 )
 
 # Crear un router y registrar nuestros viewsets con él.
@@ -38,6 +39,7 @@ urlpatterns = [
     # URLs para Paz y Salvo
     path('pasisalvos/', PasisalvoListCreateAPIView.as_view(), name='pasisalvo-list-create'),
     path('pasisalvos/<int:pk>/', PasisalvoRetrieveUpdateDestroyAPIView.as_view(), name='pasisalvo-detail'),
+    path('pasisalvos/empleado/<int:empleado_id>/info/', clearance_info, name='clearance-info'),
 
     # URL para obtener el token de autenticación
     path('api-token-auth/', authtoken_views.obtain_auth_token, name='api_token_auth'),

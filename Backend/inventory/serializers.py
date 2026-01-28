@@ -131,13 +131,27 @@ class LicenciaSerializer(serializers.ModelSerializer):
         read_only_fields = ['equipo_asociado_serial']
 
 class PasisalvoSerializer(serializers.ModelSerializer):
-    colaborador_username = serializers.CharField(source='colaborador.username', read_only=True)
+    colaborador_info = serializers.SerializerMethodField()
     generado_por_username = serializers.CharField(source='generado_por.username', read_only=True, allow_null=True)
 
     class Meta:
         model = Pasisalvo
-        fields = '__all__'
-        read_only_fields = ['fecha_generacion', 'estado', 'detalles_pendientes', 'colaborador_username', 'generado_por_username']
+        fields = [
+            'id', 'colaborador', 'colaborador_info', 'fecha_generacion', 
+            'estado', 'detalles_pendientes', 'generado_por', 'generado_por_username', 'pdf_url'
+        ]
+        read_only_fields = ['fecha_generacion', 'generado_por_username']
+
+    def get_colaborador_info(self, obj):
+        if obj.colaborador:
+            return {
+                'id': obj.colaborador.id,
+                'nombre_completo': f"{obj.colaborador.nombre} {obj.colaborador.apellido}",
+                'cedula': obj.colaborador.cedula,
+                'cargo': obj.colaborador.cargo,
+                'area': obj.colaborador.area,
+            }
+        return None
 
 class HistorialPerifericoSerializer(serializers.ModelSerializer):
     periferico_nombre = serializers.CharField(read_only=True)

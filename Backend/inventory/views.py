@@ -398,3 +398,35 @@ class HistorialEquipoListView(generics.ListAPIView):
         
         # 3. If permission is granted, return the actual queryset.
         return HistorialEquipo.objects.filter(equipo__pk=equipo_pk)
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from .serializers import PerifericoSerializer
+from empleados.models import Empleado
+from empleados.serializers import EmpleadoSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def clearance_info(request, empleado_id):
+    try:
+        empleado = Empleado.objects.get(pk=empleado_id)
+    except Empleado.DoesNotExist:
+        return Response({"detail": "Empleado no encontrado"}, status=404)
+
+    equipos_activos = Equipo.objects.filter(empleado_asignado=empleado, activo=True)
+    perifericos_activos = Periferico.objects.filter(empleado_asignado=empleado)
+    historial_entregas = HistorialMovimientoEquipo.objects.filter(
+        empleado_asignado=empleado, 
+        fecha_devolucion__isnull=False
+    )
+
+    data = {
+        "empleado": EmpleadoSerializer(empleado).data,
+        "pendientes": {
+            "equipos": EquipoSerializer(equipos_activos, many=True).data,
+            "perifericos": PerifericoSerializer(perifericos_activos, many=True).data,
+        },
+        "entregados_historial": HistorialMovimientoEquipoSerializer(historial_entregas, many=True).data,
+        "esta_a_paz_y_salvo": equipos_activos.count() == 0 and perifericos_activos.count() == 0
+    }
+    return Response(data)

@@ -9,6 +9,9 @@ class Empleado(models.Model):
     email = models.EmailField(unique=True, null=True, blank=True)
     cargo = models.CharField(max_length=100, blank=True, null=True)
     area = models.CharField(max_length=100, blank=True, null=True)
+    ciudad = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ciudad")
+    fecha_ingreso = models.DateField(null=True, blank=True, verbose_name="Fecha de Ingreso")
+    fecha_retiro = models.DateField(null=True, blank=True, verbose_name="Fecha de Retiro")
 
     def __str__(self):
         return f'{self.nombre} {self.apellido}'

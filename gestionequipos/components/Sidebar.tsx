@@ -30,6 +30,7 @@ const navItems = [
       { name: 'Historial', href: '/perifericos/historial' }
     ]
   },
+  { name: 'Paz y Salvo', href: '/pasisalvos', icon: '📜' },
   { name: 'Configuración', href: '/configuracion', icon: '⚙️' },
 ];
 
