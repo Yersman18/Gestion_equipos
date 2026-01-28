@@ -25,7 +25,7 @@ const MantenimientosPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEstado, setFilterEstado] = useState('todos');
-  
+
   const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const router = useRouter();
@@ -59,9 +59,9 @@ const MantenimientosPage: React.FC = () => {
     const fetchMantenimientos = async () => {
       setLoading(true);
       setError(null);
-      
+
       const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`);
-      
+
       if (sedeId) {
         url.searchParams.append('sede_id', String(sedeId));
       }
@@ -245,269 +245,275 @@ const MantenimientosPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      {/* Header */}
+      <div className="mb-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-black text-gray-800 flex items-center">
+            <div className="flex items-center mb-2">
               <span className="text-4xl mr-3">🔧</span>
-              Gestión de Mantenimientos
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {sedeActiva 
-                ? `Mantenimientos para la sede: ${sedeActiva.nombre}`
-                : 'Todos los mantenimientos (Vista de Superusuario)'}
+              <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+                Gestión de Mantenimientos
+              </h1>
+            </div>
+            <p className="text-gray-500 font-medium ml-14">
+              {sedeActiva
+                ? `Seguimiento de tareas técnicas en ejecución para la sede: ${sedeActiva.nombre}`
+                : 'Control global de tareas técnicas y reparaciones (Superusuario)'}
             </p>
           </div>
-          <Link 
-            href="/mantenimientos/registrar" 
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+          <Link
+            href="/mantenimientos/registrar"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center space-x-2"
           >
             <span className="text-xl">➕</span>
             <span>Registrar Mantenimiento</span>
           </Link>
         </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="🔍 Buscar por equipo o responsable..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-
-            <div className="relative">
-              <select
-                value={filterEstado}
-                onChange={(e) => setFilterEstado(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-white cursor-pointer"
-              >
-                <option value="todos">📊 Todos los estados</option>
-                <option value="Pendiente">⏳ Pendiente</option>
-                <option value="En proceso">🔄 En proceso</option>
-                <option value="Finalizado">✅ Finalizado</option>
-                <option value="Cancelado">❌ Cancelado</option>
-              </select>
-            </div>
+      </div>
+      <div className="bg-white rounded-xl shadow-lg p-5 border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="🔍 Buscar por equipo o responsable..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+            />
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-            <span>
-              Mostrando <span className="font-bold text-green-600">{mantenimientosFiltrados.length}</span> de <span className="font-bold">{mantenimientos.length}</span> mantenimientos
-            </span>
-            {(searchTerm || filterEstado !== 'todos') && (
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterEstado('todos');
-                }}
-                className="text-red-600 hover:text-red-700 font-semibold"
-              >
-                Limpiar filtros ✖️
-              </button>
-            )}
+          <div className="relative">
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all bg-white cursor-pointer"
+            >
+              <option value="todos">📊 Todos los estados</option>
+              <option value="Pendiente">⏳ Pendiente</option>
+              <option value="En proceso">🔄 En proceso</option>
+              <option value="Finalizado">✅ Finalizado</option>
+              <option value="Cancelado">❌ Cancelado</option>
+            </select>
           </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <span>
+            Mostrando <span className="font-bold text-green-600">{mantenimientosFiltrados.length}</span> de <span className="font-bold">{mantenimientos.length}</span> mantenimientos
+          </span>
+          {(searchTerm || filterEstado !== 'todos') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setFilterEstado('todos');
+              }}
+              className="text-red-600 hover:text-red-700 font-semibold"
+            >
+              Limpiar filtros ✖️
+            </button>
+          )}
         </div>
       </div>
 
-      {mantenimientosFiltrados.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {mantenimientosFiltrados.map((m) => (
-            <div key={m.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group">
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-white font-bold text-lg mb-1">{m.equipo_asociado_nombre}</h3>
-                    <p className="text-white/90 text-sm">Mantenimiento {m.tipo_mantenimiento}</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                    <span className="text-2xl">🔧</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5 space-y-3">
-                <div className="flex items-center text-sm">
-                  <span className="text-gray-500 font-medium w-28">Responsable:</span>
-                  <span className="text-gray-800 font-semibold">
-                    {m.usuario_responsable_username ? (
-                      <span>👤 {m.usuario_responsable_username}</span>
-                    ) : (
-                      <span className="text-gray-400 italic">No asignado</span>
-                    )}
-                  </span>
-                </div>
-
-                <div className="flex items-center text-sm">
-                  <span className="text-gray-500 font-medium w-28">Fecha inicio:</span>
-                  <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded">
-                    📅 {(() => {
-                      const [year, month, day] = m.fecha_inicio.split('-').map(Number);
-                      return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      });
-                    })()}
-                  </span>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-medium">Tipo:</span>
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getTipoBadge(m.tipo_mantenimiento)}`}>
-                      {m.tipo_mantenimiento}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-medium">Estado:</span>
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getEstadoBadge(m.estado_mantenimiento)}`}>
-                      {m.estado_mantenimiento}
-                    </span>
-                  </div>
-                  {m.fecha_finalizacion && (
-                    <div className="flex items-center text-sm pt-2 border-t border-gray-200">
-                      <span className="text-gray-500 font-medium w-28">Fecha fin:</span>
-                      <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded text-xs">
-                        📅 {(() => {
-                          const [year, month, day] = m.fecha_finalizacion.split('-').map(Number);
-                          return new Date(year, month - 1, day).toLocaleDateString('es-ES', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          });
-                        })()}
+      {
+        mantenimientosFiltrados.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {mantenimientosFiltrados.map((m) => (
+              <div key={m.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group">
+                {/* Header de la tarjeta - Estilo Formal */}
+                <div className="bg-gray-50 p-5 border-b border-gray-100 flex items-start justify-between relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
+                  <div className="flex-1 pl-2">
+                    <h3 className="text-gray-900 font-bold text-lg mb-1 leading-tight uppercase tracking-tight">{m.equipo_asociado_nombre}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-700 text-[10px] font-black uppercase px-2 py-0.5 bg-blue-50 border border-blue-100 rounded">
+                        Mantenimiento {m.tipo_mantenimiento}
                       </span>
                     </div>
-                  )}
-                  {m.estado_mantenimiento === 'Finalizado' && m.evidencia_finalizacion_url && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <a
-                        href={m.evidencia_finalizacion_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 text-sm text-teal-600 hover:text-teal-800 font-semibold hover:underline"
-                        title={m.evidencia_finalizacion_filename || 'Ver evidencia de finalización'}
-                      >
-                        <span>📄</span>
-                        <span>Ver Evidencia de Finalización</span>
-                      </a>
-                    </div>
-                  )}
+                  </div>
+                  <span className="text-xl">🔧</span>
                 </div>
-              </div>
 
-              <div className="bg-gray-50 px-5 py-3 flex flex-wrap justify-end items-center gap-2">
-                {m.estado_mantenimiento === 'Pendiente' && (
-                  <button
-                    onClick={() => handleIniciarProceso(m.id)}
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                <div className="p-5 space-y-3">
+                  <div className="flex items-center text-sm">
+                    <span className="text-gray-500 font-medium w-28">Responsable:</span>
+                    <span className="text-gray-800 font-semibold">
+                      {m.usuario_responsable_username ? (
+                        <span>👤 {m.usuario_responsable_username}</span>
+                      ) : (
+                        <span className="text-gray-400 italic">No asignado</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center text-sm">
+                    <span className="text-gray-500 font-medium w-28">Fecha inicio:</span>
+                    <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded">
+                      📅 {(() => {
+                        const [year, month, day] = m.fecha_inicio.split('-').map(Number);
+                        return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        });
+                      })()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 font-medium">Tipo:</span>
+                      <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getTipoBadge(m.tipo_mantenimiento)}`}>
+                        {m.tipo_mantenimiento}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 font-medium">Estado:</span>
+                      <span className={`text-xs font-semibold px-3 py-1 rounded-full border ${getEstadoBadge(m.estado_mantenimiento)}`}>
+                        {m.estado_mantenimiento}
+                      </span>
+                    </div>
+                    {m.fecha_finalizacion && (
+                      <div className="flex items-center text-sm pt-2 border-t border-gray-200">
+                        <span className="text-gray-500 font-medium w-28">Fecha fin:</span>
+                        <span className="text-gray-800 font-mono bg-gray-100 px-2 py-1 rounded text-xs">
+                          📅 {(() => {
+                            const [year, month, day] = m.fecha_finalizacion.split('-').map(Number);
+                            return new Date(year, month - 1, day).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            });
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    {m.estado_mantenimiento === 'Finalizado' && m.evidencia_finalizacion_url && (
+                      <div className="pt-2 border-t border-gray-200">
+                        <a
+                          href={m.evidencia_finalizacion_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center space-x-2 text-sm text-teal-600 hover:text-teal-800 font-semibold hover:underline"
+                          title={m.evidencia_finalizacion_filename || 'Ver evidencia de finalización'}
+                        >
+                          <span>📄</span>
+                          <span>Ver Evidencia de Finalización</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-5 py-3 flex flex-wrap justify-end items-center gap-2">
+                  {m.estado_mantenimiento === 'Pendiente' && (
+                    <button
+                      onClick={() => handleIniciarProceso(m.id)}
+                      className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                    >
+                      <span>▶️</span>
+                      <span>Iniciar Proceso</span>
+                    </button>
+                  )}
+                  <Link
+                    href={`/mantenimientos/editar/${m.id}`}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
                   >
-                    <span>▶️</span>
-                    <span>Iniciar Proceso</span>
-                  </button>
-                )}
-                <Link 
-                  href={`/mantenimientos/editar/${m.id}`} 
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
-                >
-                  <span>✏️</span>
-                  <span>Editar</span>
-                </Link>
-                <button
-                  onClick={() => openFinalizarModal(m)}
-                  className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
-                    m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
+                    <span>✏️</span>
+                    <span>Editar</span>
+                  </Link>
+                  <button
+                    onClick={() => openFinalizarModal(m)}
+                    className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-green-600 hover:bg-green-700'
-                  }`}
-                  disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
-                >
-                  <span>✅</span>
-                  <span>Finalizar</span>
-                </button>
-                <button
-                  onClick={() => handleCancel(m.id)}
-                  className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${
-                    m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
+                      }`}
+                    disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
+                  >
+                    <span>✅</span>
+                    <span>Finalizar</span>
+                  </button>
+                  <button
+                    onClick={() => handleCancel(m.id)}
+                    className={`font-semibold text-sm px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1 text-white ${m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                  disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
+                      }`}
+                    disabled={m.estado_mantenimiento === 'Finalizado' || m.estado_mantenimiento === 'Cancelado'}
+                  >
+                    <span>❌</span>
+                    <span>Cancelar</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-gray-400 rounded-lg p-8 shadow-lg text-center">
+            <span className="text-5xl mb-4 block">📋</span>
+            <p className="text-gray-700 font-semibold text-lg">
+              {mantenimientos.length === 0 && !loading
+                ? 'No hay mantenimientos registrados para la sede actual o con el filtro aplicado.'
+                : 'No se encontraron mantenimientos con los filtros aplicados.'}
+            </p>
+          </div>
+        )
+      }
+
+      {
+        mantenimientoToFinalize && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
+            <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Finalizar Mantenimiento</h2>
+              <p className="mb-6 text-gray-600">
+                Para finalizar el mantenimiento del equipo <span className="font-bold">{mantenimientoToFinalize.equipo_asociado_nombre}</span>, por favor adjunta la evidencia de finalización.
+              </p>
+
+              <div className="space-y-2">
+                <label htmlFor="evidencia_finalizacion" className="block text-sm font-bold text-gray-700">
+                  📄 Evidencia de Finalización <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  id="evidencia_finalizacion"
+                  name="evidencia_finalizacion"
+                  onChange={(e) => setEvidenciaFinalizacion(e.target.files ? e.target.files[0] : null)}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                  required
+                />
+              </div>
+
+              {finalizeError && (
+                <div className="mt-4 text-red-600 text-sm font-semibold">
+                  {finalizeError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-4 mt-8">
+                <button
+                  onClick={closeFinalizarModal}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors"
+                  disabled={isFinalizing}
                 >
-                  <span>❌</span>
-                  <span>Cancelar</span>
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSubmitFinalizacion}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center disabled:bg-gray-400"
+                  disabled={isFinalizing || !evidenciaFinalizacion}
+                >
+                  {isFinalizing ? (
+                    <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Finalizando...</>
+                  ) : (
+                    'Confirmar Finalización'
+                  )}
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-gray-400 rounded-lg p-8 shadow-lg text-center">
-          <span className="text-5xl mb-4 block">📋</span>
-          <p className="text-gray-700 font-semibold text-lg">
-            {mantenimientos.length === 0 && !loading
-              ? 'No hay mantenimientos registrados para la sede actual o con el filtro aplicado.'
-              : 'No se encontraron mantenimientos con los filtros aplicados.'}
-          </p>
-        </div>
-      )}
-
-      {mantenimientoToFinalize && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-            <div className="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Finalizar Mantenimiento</h2>
-                <p className="mb-6 text-gray-600">
-                    Para finalizar el mantenimiento del equipo <span className="font-bold">{mantenimientoToFinalize.equipo_asociado_nombre}</span>, por favor adjunta la evidencia de finalización.
-                </p>
-                
-                <div className="space-y-2">
-                    <label htmlFor="evidencia_finalizacion" className="block text-sm font-bold text-gray-700">
-                        📄 Evidencia de Finalización <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="file"
-                        id="evidencia_finalizacion"
-                        name="evidencia_finalizacion"
-                        onChange={(e) => setEvidenciaFinalizacion(e.target.files ? e.target.files[0] : null)}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                        required
-                    />
-                </div>
-
-                {finalizeError && (
-                    <div className="mt-4 text-red-600 text-sm font-semibold">
-                        {finalizeError}
-                    </div>
-                )}
-
-                <div className="flex justify-end gap-4 mt-8">
-                    <button
-                        onClick={closeFinalizarModal}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors"
-                        disabled={isFinalizing}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleSubmitFinalizacion}
-                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center disabled:bg-gray-400"
-                        disabled={isFinalizing || !evidenciaFinalizacion}
-                    >
-                        {isFinalizing ? (
-                            <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Finalizando...</>
-                        ) : (
-                            'Confirmar Finalización'
-                        )}
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
-    </Layout>
+          </div>
+        )
+      }
+    </Layout >
   );
 };
 

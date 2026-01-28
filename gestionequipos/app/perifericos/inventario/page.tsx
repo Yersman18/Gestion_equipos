@@ -157,10 +157,20 @@ const InventarioPerifericosPage = () => {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Inventario de Periféricos</h1>
-            <p className="text-gray-500">Asigna múltiples periféricos a un colaborador de forma masiva.</p>
+        {/* Header */}
+        <div className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <div className="flex items-center mb-2">
+                <span className="text-4xl mr-3">📦</span>
+                <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+                  Inventario de Periféricos
+                </h1>
+              </div>
+              <p className="text-gray-500 font-medium ml-14">
+                Asigna múltiples periféricos a un colaborador de forma masiva y eficiente.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -216,35 +226,40 @@ const InventarioPerifericosPage = () => {
                       return (
                         <tr
                           key={p.id}
-                          className={`hover:bg-blue-50 cursor-pointer transition-all ${selectedIds.includes(p.id) ? 'bg-blue-50' : ''} ${isAlreadyHeld ? 'opacity-50 grayscale bg-gray-50' : ''}`}
+                          className={`hover:bg-blue-50/30 cursor-pointer transition-all relative ${selectedIds.includes(p.id) ? 'bg-blue-50/50' : ''} ${isAlreadyHeld ? 'opacity-50 grayscale bg-gray-50' : ''}`}
                           onClick={() => handleToggleSelect(p.id)}
                         >
-                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-6 py-4 relative" onClick={(e) => e.stopPropagation()}>
+                            <div className={`absolute top-0 left-0 w-1 h-full ${selectedIds.includes(p.id) ? 'bg-blue-600' : 'bg-transparent'}`}></div>
                             <input
                               type="checkbox"
                               checked={selectedIds.includes(p.id)}
                               disabled={isAlreadyHeld}
                               onChange={() => handleToggleSelect(p.id)}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 disabled:opacity-30"
+                              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-30"
                             />
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <div className="text-sm font-bold text-gray-900">{p.nombre}</div>
+                              <div className="text-sm font-bold text-gray-900 uppercase tracking-tight">{p.nombre}</div>
+                              <div className="text-[10px] text-gray-400 font-black uppercase tracking-wider">{p.tipo}</div>
                               {isAlreadyHeld && (
-                                <span className="text-[10px] text-red-500 font-medium italic">
-                                  El colaborador ya tiene este tipo
+                                <span className="text-[9px] text-red-600 font-black uppercase tracking-tighter mt-1 bg-red-50 self-start px-1 rounded border border-red-100">
+                                  ⚠️ Ya posee este tipo
                                 </span>
                               )}
                               {isAnotherOfSameTypeSelected && !isAlreadyHeld && (
-                                <span className="text-[10px] text-amber-500 font-medium italic">
-                                  Solo uno por tipo
+                                <span className="text-[9px] text-amber-600 font-black uppercase tracking-tighter mt-1 bg-amber-50 self-start px-1 rounded border border-amber-100">
+                                  ⚠️ Selección duplicada
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-semibold rounded ${p.estado_tecnico === 'Funcional' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                            <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded border ${p.estado_tecnico === 'Funcional'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                : 'bg-amber-50 text-amber-700 border-amber-100'
+                              }`}>
                               {p.estado_tecnico}
                             </span>
                           </td>

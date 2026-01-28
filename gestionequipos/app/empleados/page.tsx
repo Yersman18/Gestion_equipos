@@ -108,23 +108,28 @@ export default function EmpleadosPage() {
 
   return (
     <Layout>
-      <div className="mb-8">
-        <div className="flex items-center mb-2">
-          <span className="text-4xl mr-3">👥</span>
-          <h1 className="text-3xl font-black text-gray-800">Gestión de Empleados</h1>
+      {/* Header */}
+      <div className="mb-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="text-4xl mr-3">👥</span>
+              <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+                Gestión de Colaboradores
+              </h1>
+            </div>
+            <p className="text-gray-500 font-medium ml-14">
+              Administra el listado de personal, cargos y áreas de la organización.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/empleados/registrar')}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center space-x-2"
+          >
+            <span className="text-xl">➕</span>
+            <span>Registrar Colaborador</span>
+          </button>
         </div>
-        <p className="text-gray-600 ml-14">Administra el listado de empleados en el sistema.</p>
-      </div>
-
-      {/* Botón para crear nuevo empleado */}
-      <div className="flex justify-end mb-6">
-        <button
-          onClick={() => router.push('/empleados/registrar')}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-lg"
-        >
-          <span>➕</span>
-          <span>Registrar Nuevo Empleado</span>
-        </button>
       </div>
 
       {/* Tabla de Empleados */}

@@ -276,21 +276,17 @@ const HistorialMantenimientosPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {mantenimientosFiltrados.map((m) => (
             <div key={m.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group">
-              {/* Header */}
-              <div className={`p-4 ${m.estado_mantenimiento === 'Finalizado' ? 'bg-emerald-500' :
-                m.estado_mantenimiento === 'Pendiente' ? 'bg-amber-500' :
-                  m.estado_mantenimiento === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'}`}>
-                <div className="flex justify-between items-start text-white">
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight">{m.equipo_asociado_nombre}</h3>
-                    <p className="text-white/80 text-xs mt-1 font-medium">{m.equipo_tipo || 'Equipo'}</p>
-                  </div>
-                  <span className="text-2xl bg-white/20 p-2 rounded-lg">
-                    {m.estado_mantenimiento === 'Finalizado' ? '✅' :
-                      m.estado_mantenimiento === 'Pendiente' ? '⏳' :
-                        m.estado_mantenimiento === 'Cancelado' ? '❌' : '⚙️'}
-                  </span>
+              {/* Header - Estilo Formal */}
+              <div className="bg-gray-50 p-5 border-b border-gray-100 flex items-start justify-between relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${m.estado_mantenimiento === 'Finalizado' ? 'bg-emerald-500' :
+                    m.estado_mantenimiento === 'Pendiente' ? 'bg-amber-500' :
+                      m.estado_mantenimiento === 'Cancelado' ? 'bg-red-500' : 'bg-blue-500'
+                  }`}></div>
+                <div className="flex-1 pl-2">
+                  <h3 className="text-gray-900 font-bold text-lg leading-tight uppercase tracking-tight">{m.equipo_asociado_nombre}</h3>
+                  <p className="text-gray-500 text-[10px] font-black uppercase mt-1 tracking-wider">{m.equipo_tipo || 'Elemento Tecnológico'}</p>
                 </div>
+                <span className="text-xl">📜</span>
               </div>
 
               {/* Body */}

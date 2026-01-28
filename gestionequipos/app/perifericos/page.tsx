@@ -118,26 +118,35 @@ const PerifericosPage = () => {
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestión de Periféricos</h1>
-            <p className="text-gray-500 text-sm">
-              Mostrando {filteredPerifericos.length} de {perifericos.length} periféricos
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link
-              href="/perifericos/registrar"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
-            >
-              Registrar Periférico
-            </Link>
-            <Link
-              href="/perifericos/registrar/lote"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-sm transition-all duration-200"
-            >
-              Registrar en Lote
-            </Link>
+        <div className="mb-10">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <div className="flex items-center mb-2">
+                <span className="text-4xl mr-3">🖱️</span>
+                <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+                  Gestión de Periféricos
+                </h1>
+              </div>
+              <p className="text-gray-500 font-medium ml-14">
+                Administra teclados, mouse, monitores y más elementos del inventario.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/perifericos/registrar"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+              >
+                <span>➕</span>
+                <span>Registrar Periférico</span>
+              </Link>
+              <Link
+                href="/perifericos/registrar/lote"
+                className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+              >
+                <span>📦</span>
+                <span>Registrar en Lote</span>
+              </Link>
+            </div>
           </div>
         </div>
 

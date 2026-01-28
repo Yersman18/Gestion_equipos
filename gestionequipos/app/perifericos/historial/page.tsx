@@ -192,45 +192,56 @@ const HistorialPerifericosPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {historialFiltrado.map((h) => (
-                  <tr key={h.id} className={`hover:bg-gray-50 transition-colors ${h.es_baja ? 'bg-red-50/20' : ''}`}>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-bold text-gray-900 leading-tight">{h.periferico_nombre}</div>
-                      <div className="text-[10px] text-gray-400 font-medium uppercase">{h.periferico_tipo}</div>
+                  <tr key={h.id} className="hover:bg-gray-50 transition-colors relative">
+                    <td className="px-6 py-4 relative">
+                      <div className={`absolute top-0 left-0 w-1 h-full ${h.es_baja ? 'bg-red-500' :
+                          h.fecha_devolucion ? 'bg-emerald-500' : 'bg-blue-500'
+                        }`}></div>
+                      <div className="text-sm font-bold text-gray-900 leading-tight pl-2">{h.periferico_nombre}</div>
+                      <div className="text-[10px] text-gray-400 font-black uppercase pl-2 tracking-wider">{h.periferico_tipo}</div>
                     </td>
                     <td className="px-6 py-4">
                       {h.es_baja ? (
-                        <div className="text-xs font-black text-red-600 uppercase tracking-tighter">Baja del Sistema</div>
+                        <span className="text-[10px] font-black text-red-600 uppercase bg-red-50 px-2 py-1 rounded border border-red-100 italic">Retirado del Sistema</span>
                       ) : (
-                        <div className="text-sm text-gray-700 font-medium">{h.empleado_nombre}</div>
+                        <div className="text-sm text-gray-700 font-semibold flex items-center gap-2">
+                          <span className="text-gray-400">👤</span> {h.empleado_nombre}
+                        </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600 font-mono">
-                        {new Date(h.fecha_asignacion).toLocaleDateString()}
+                      <div className="text-sm text-gray-600 font-mono bg-gray-50 px-2 py-1 rounded inline-block">
+                        📅 {new Date(h.fecha_asignacion).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {h.es_baja ? (
-                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-red-100 text-red-700">De Baja</span>
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-red-100 text-red-700 border border-red-200">De Baja</span>
                       ) : h.fecha_devolucion ? (
-                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-emerald-100 text-emerald-700">Completo</span>
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-emerald-100 text-emerald-700 border border-emerald-200">Devuelto</span>
                       ) : (
-                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded-full bg-blue-100 text-blue-700 shadow-sm animate-pulse-subtle">Vigente</span>
+                        <span className="px-2 py-1 text-[10px] font-black uppercase rounded bg-blue-100 text-blue-700 border border-blue-200 shadow-sm animate-pulse-subtle">Asignado</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-xs">
                       {h.es_baja ? (
                         <div className="flex flex-col">
-                          <span className="text-red-700 font-bold">Retiro: {h.fecha_baja ? new Date(h.fecha_baja).toLocaleDateString() : 'N/A'}</span>
-                          <span className="text-[10px] italic text-gray-400">"{h.observacion_devolucion}"</span>
+                          <span className="text-red-700 font-black">RETIRO: {h.fecha_baja ? new Date(h.fecha_baja).toLocaleDateString() : 'N/A'}</span>
+                          <span className="text-[10px] italic text-gray-400 mt-1">"{h.observacion_devolucion}"</span>
                         </div>
                       ) : h.fecha_devolucion ? (
                         <div className="flex flex-col">
-                          <span className="text-emerald-700 font-bold">Devuelto: {new Date(h.fecha_devolucion).toLocaleDateString()}</span>
-                          {h.observacion_devolucion && <span className="text-[10px] italic text-gray-400">"{h.observacion_devolucion}"</span>}
+                          <span className="text-emerald-700 font-black tracking-tight">DEVUELTO: {new Date(h.fecha_devolucion).toLocaleDateString()}</span>
+                          {h.observacion_devolucion && <span className="text-[10px] italic text-gray-400 mt-1">"{h.observacion_devolucion}"</span>}
                         </div>
                       ) : (
-                        <span className="text-blue-500 font-bold italic">En posesión</span>
+                        <div className="flex items-center gap-1 text-blue-600 font-black uppercase text-[10px] tracking-tight">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                          </span>
+                          Activo en uso
+                        </div>
                       )}
                     </td>
                   </tr>

@@ -51,7 +51,7 @@ export default function EquiposPage() {
     const fetchEquipos = async () => {
       setIsLoadingData(true);
       setError(null);
-      
+
       const params = new URLSearchParams();
       if (!user?.is_superuser) {
         if (isSedeLoading) return;
@@ -62,7 +62,7 @@ export default function EquiposPage() {
         }
         params.append('sede', String(sedeActiva.id));
       }
-      
+
       const apiUrl = `/api/equipos/?${params.toString()}`;
 
       try {
@@ -78,6 +78,30 @@ export default function EquiposPage() {
 
     fetchEquipos();
   }, [user, isAuthenticated, isAuthLoading, isSedeLoading, sedeActiva, router]);
+
+  const handleDevolver = async (equipo: Equipo) => {
+    if (window.confirm(`¿Estás seguro de que quieres devolver el equipo ${equipo.nombre} al inventario? Quedará disponible para ser asignado nuevamente.`)) {
+      try {
+        await fetchAuthenticated(`/api/equipos/${equipo.id}/`, {
+          method: 'PATCH', // Usamos PATCH para actualizar solo lo necesario
+          body: JSON.stringify({
+            empleado_asignado: null,
+            estado_disponibilidad: 'Disponible',
+            fecha_entrega_a_colaborador: null
+          }),
+        });
+
+        setEquipos(prevEquipos => prevEquipos.map(e =>
+          e.id === equipo.id
+            ? { ...e, estado_disponibilidad: 'Disponible', empleado_asignado_info: undefined }
+            : e
+        ));
+        alert('Equipo devuelto al inventario exitosamente.');
+      } catch (err: any) {
+        alert(`Error al devolver el equipo: ${err.message}`);
+      }
+    }
+  };
 
   const handleDarDeBaja = async (equipoId: number) => {
     if (window.confirm('¿Estás seguro de que quieres dar de baja este equipo? El equipo se archivará y no aparecerá en las listas principales, pero no se eliminará permanentemente.')) {
@@ -96,12 +120,12 @@ export default function EquiposPage() {
       }
     }
   };
-  
+
   // Filtrar equipos
   const equiposFiltrados = equipos.filter(equipo => {
     const matchSearch = equipo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       equipo.marca.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       equipo.serial.toLowerCase().includes(searchTerm.toLowerCase());
+      equipo.marca.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      equipo.serial.toLowerCase().includes(searchTerm.toLowerCase());
     const matchEstado = filterEstado === 'todos' || equipo.estado_disponibilidad === filterEstado;
     return matchSearch && matchEstado;
   });
@@ -163,7 +187,7 @@ export default function EquiposPage() {
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-l-4 border-gray-400 rounded-lg p-8 shadow-lg text-center">
           <span className="text-5xl mb-4 block"></span>
           <p className="text-gray-700 font-semibold text-lg">
-            {equipos.length === 0 
+            {equipos.length === 0
               ? (user?.is_superuser ? 'No hay equipos registrados en el sistema.' : 'No hay equipos registrados en esta sede.')
               : 'No se encontraron equipos con los filtros aplicados.'}
           </p>
@@ -175,17 +199,17 @@ export default function EquiposPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {equiposFiltrados.map((equipo) => (
           <div key={equipo.id} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-200 group">
-            {/* Header de la tarjeta */}
-            <div className="bg-gradient-to-r from-green-500 to-green-600 p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-white font-bold text-lg mb-1">{equipo.nombre}</h3>
-                  <p className="text-white/90 text-sm">{equipo.marca} {equipo.modelo}</p>
-                </div>
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                  <span className="text-2xl"></span>
+            {/* Header de la tarjeta - Estilo Formal */}
+            <div className="bg-gray-50 p-5 border-b border-gray-100 flex items-start justify-between relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600"></div>
+              <div className="flex-1 pl-2">
+                <h3 className="text-gray-900 font-bold text-lg mb-1 leading-tight group-hover:text-blue-700 transition-colors uppercase tracking-tight">{equipo.nombre}</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-semibold px-2 py-0.5 bg-gray-200 rounded uppercase tracking-wider">{equipo.marca}</span>
+                  <span className="text-gray-500 text-xs font-medium">{equipo.modelo}</span>
                 </div>
               </div>
+              <span className="text-xl">💻</span>
             </div>
 
             {/* Contenido de la tarjeta */}
@@ -234,19 +258,28 @@ export default function EquiposPage() {
             </div>
 
             {/* Footer con acciones */}
-            <div className="bg-gray-50 px-5 py-3 flex justify-end space-x-2">
-              <button 
+            <div className="bg-gray-50 px-5 py-3 flex justify-end items-center gap-2">
+              {equipo.estado_disponibilidad === 'Asignado' && (
+                <button
+                  onClick={() => handleDevolver(equipo)}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                >
+                  <span>🔄</span>
+                  <span>Devolver</span>
+                </button>
+              )}
+              <button
                 onClick={() => handleDarDeBaja(equipo.id)}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
               >
-                <span></span>
+                <span>🗑️</span>
                 <span>Dar de Baja</span>
               </button>
-              <Link 
-                href={`/equipos/editar/${equipo.id}`} 
+              <Link
+                href={`/equipos/editar/${equipo.id}`}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
               >
-                <span></span>
+                <span>✏️</span>
                 <span>Editar</span>
               </Link>
             </div>
@@ -259,22 +292,26 @@ export default function EquiposPage() {
   return (
     <Layout>
       {/* Header con título y botón */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div className="mb-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-black text-gray-800 flex items-center">
-              <span className="text-4xl mr-3"></span>
-              Equipos
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {user?.is_superuser ? '(Todas las Sedes)' : (sedeActiva ? `${sedeActiva.nombre}` : '')}
+            <div className="flex items-center mb-2">
+              <span className="text-4xl mr-3">💻</span>
+              <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+                Gestión de Equipos
+              </h1>
+            </div>
+            <p className="text-gray-500 font-medium ml-14">
+              {user?.is_superuser
+                ? 'Panel global de inventario tecnológico (Todas las Sedes)'
+                : (sedeActiva ? `Inventario tecnológico asignado a la sede: ${sedeActiva.nombre}` : 'Selecciona una sede para gestionar el inventario')}
             </p>
           </div>
-          <Link 
-            href="/equipos/registrar" 
-            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+          <Link
+            href="/equipos/registrar"
+            className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center space-x-2"
           >
-            <span className="text-xl"></span>
+            <span className="text-xl">➕</span>
             <span>Registrar Equipo</span>
           </Link>
         </div>
@@ -322,7 +359,7 @@ export default function EquiposPage() {
                 }}
                 className="text-red-600 hover:text-red-700 font-semibold"
               >
-                Limpiar filtros 
+                Limpiar filtros
               </button>
             )}
           </div>

@@ -118,7 +118,7 @@ export default function DashboardPage() {
     return (
       <Layout>
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-            <p className="text-red-800 font-medium">Error al cargar el dashboard: {error}</p>
+          <p className="text-red-800 font-medium">Error al cargar el dashboard: {error}</p>
         </div>
       </Layout>
     );
@@ -132,7 +132,7 @@ export default function DashboardPage() {
   const equiposDisponibles = stats?.equipos_por_disponibilidad?.find(
     (item) => item.estado_disponibilidad === 'Disponible'
   )?.count || 0;
-  
+
   const equiposEnReparacion = stats?.equipos_por_estado?.find(
     (item) => item.estado_tecnico === 'En reparación'
   )?.count || 0;
@@ -140,22 +140,34 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
-        
+        {/* Header */}
+        <div className="mb-10">
+          <div className="flex items-center mb-2">
+            <span className="text-4xl mr-3">📊</span>
+            <h1 className="text-4xl font-black text-gray-800 tracking-tight">
+              Panel de Control
+            </h1>
+          </div>
+          <p className="text-gray-500 font-medium ml-14">
+            Resumen en tiempo real del inventario tecnológico y estado de los mantenimientos.
+          </p>
+        </div>
+
         {/* Sección de Estadísticas Principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <StatCard 
+          <StatCard
             title="En Operación"
             value={equiposEnOperacion}
             description="Equipos asignados actualmente"
             colorClass="from-blue-500 to-blue-600"
           />
-          <StatCard 
+          <StatCard
             title="Disponibles"
             value={equiposDisponibles}
             description="Listos para ser asignados"
             colorClass="from-emerald-500 to-emerald-600"
           />
-          <StatCard 
+          <StatCard
             title="Dados de Baja"
             value={stats?.equipos_dados_de_baja || 0}
             description="Equipos retirados o inactivos"
@@ -166,19 +178,19 @@ export default function DashboardPage() {
         {/* Sección de Mantenimientos */}
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión de Mantenimientos</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <StatCard 
+          <StatCard
             title="Mantenimientos Activos"
             value={stats?.mantenimientos_activos || 0}
             description="Pendientes o En Proceso"
             colorClass="from-yellow-500 to-yellow-600"
           />
-          <StatCard 
+          <StatCard
             title="Próximos Mantenimientos"
             value={stats?.proximos_mantenimientos || 0}
             description="En los siguientes 30 días"
             colorClass="from-sky-500 to-sky-600"
           />
-          <StatCard 
+          <StatCard
             title="En Reparación"
             value={equiposEnReparacion}
             description="Equipos en taller"
@@ -188,7 +200,7 @@ export default function DashboardPage() {
 
         {/* Sección de Resumen General y Desgloses */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Columna de Resumen General */}
           <div className="lg:col-span-1 space-y-6">
             <h2 className="text-2xl font-bold text-gray-800">Resumen General</h2>
@@ -204,7 +216,7 @@ export default function DashboardPage() {
               <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_licencias || 0}</div>
               <div className="text-sm text-gray-500 font-medium">Total Licencias</div>
             </div>
-             <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
               <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_usuarios || 0}</div>
               <div className="text-sm text-gray-500 font-medium">Total Usuarios</div>
             </div>
@@ -212,28 +224,28 @@ export default function DashboardPage() {
 
           {/* Columna de Desgloses */}
           <div className="lg:col-span-2 space-y-8">
-             <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-gray-800 font-semibold text-lg mb-4">Mantenimientos por Estado</h3>
-                <ul className="space-y-3">
-                  {stats?.mantenimientos_por_estado?.map(item => (
-                    <li key={`mantenimiento-${item.estado_mantenimiento}`} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">{item.estado_mantenimiento}</span>
-                      <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
-                    </li>
-                  ))}
-                </ul>
+            <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+              <h3 className="text-gray-800 font-semibold text-lg mb-4">Mantenimientos por Estado</h3>
+              <ul className="space-y-3">
+                {stats?.mantenimientos_por_estado?.map(item => (
+                  <li key={`mantenimiento-${item.estado_mantenimiento}`} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">{item.estado_mantenimiento}</span>
+                    <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-gray-800 font-semibold text-lg mb-4">Equipos por Estado Técnico</h3>
-                <ul className="space-y-3">
-                  {stats?.equipos_por_estado?.map(item => (
-                    <li key={`equipo-${item.estado_tecnico}`} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-600">{item.estado_tecnico}</span>
-                      <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
-                    </li>
-                  ))}
-                </ul>
+              <h3 className="text-gray-800 font-semibold text-lg mb-4">Equipos por Estado Técnico</h3>
+              <ul className="space-y-3">
+                {stats?.equipos_por_estado?.map(item => (
+                  <li key={`equipo-${item.estado_tecnico}`} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">{item.estado_tecnico}</span>
+                    <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
