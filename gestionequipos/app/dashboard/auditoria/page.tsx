@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 import { useAuth } from '@/app/context/AuthContext';
+import { useSede } from '@/app/context/SedeContext';
 import { useRouter } from 'next/navigation';
 
 interface AuditoriaEntry {
@@ -21,6 +22,7 @@ interface AuditoriaEntry {
 
 const AuditoriaDashboard = () => {
     const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+    const { sedeActiva, isLoading: isSedeLoading } = useSede();
     const router = useRouter();
 
     const [entries, setEntries] = useState<AuditoriaEntry[]>([]);
@@ -29,7 +31,7 @@ const AuditoriaDashboard = () => {
     const [filterTipo, setFilterTipo] = useState('todos');
 
     useEffect(() => {
-        if (isAuthLoading) return;
+        if (isAuthLoading || isSedeLoading) return;
         if (!isAuthenticated || !(user?.is_superuser || user?.rol === 'ADMIN')) {
             router.push('/dashboard');
             return;
@@ -38,11 +40,14 @@ const AuditoriaDashboard = () => {
         const fetchAllHistory = async () => {
             setLoading(true);
             try {
-                // Fetching all histories in parallel
+                // Prepare query params
+                const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
+
+                // Fetching all histories in parallel with sede filtering
                 const [equiposHist, perifericosHist, mantenimientos] = await Promise.all([
-                    fetchAuthenticated('/api/equipos/historial/').catch(() => []),
-                    fetchAuthenticated('/api/perifericos/historial/').catch(() => []),
-                    fetchAuthenticated('/api/mantenimientos/').catch(() => ({ results: [] }))
+                    fetchAuthenticated(`/api/equipos/historial/${queryParams}`).catch(() => []),
+                    fetchAuthenticated(`/api/perifericos/historial/${queryParams}`).catch(() => []),
+                    fetchAuthenticated(`/api/mantenimientos/${queryParams}`).catch(() => ({ results: [] }))
                 ]);
 
                 const unified: AuditoriaEntry[] = [];
@@ -110,7 +115,7 @@ const AuditoriaDashboard = () => {
         };
 
         fetchAllHistory();
-    }, [isAuthenticated, isAuthLoading, user, router]);
+    }, [isAuthenticated, isAuthLoading, isSedeLoading, user, router, sedeActiva]);
 
     const filteredEntries = entries.filter(e => {
         const search = searchTerm.toLowerCase();

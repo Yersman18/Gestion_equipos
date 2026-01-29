@@ -6,6 +6,8 @@ import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 import { EmpleadoSelector } from '@/components/EmpleadoSelector';
 
+import { useSede } from '@/app/context/SedeContext';
+
 interface Periferico {
   id: number;
   nombre: string;
@@ -17,6 +19,7 @@ interface Periferico {
 
 const InventarioPerifericosPage = () => {
   const router = useRouter();
+  const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const [availablePerifericos, setAvailablePerifericos] = useState<Periferico[]>([]);
   const [allPerifericos, setAllPerifericos] = useState<Periferico[]>([]);
   const [empleadoPerifericos, setEmpleadoPerifericos] = useState<string[]>([]); // Tipos que ya tiene el empleado
@@ -29,9 +32,13 @@ const InventarioPerifericosPage = () => {
   const [filterTipo, setFilterTipo] = useState('Todos');
 
   useEffect(() => {
+    if (isSedeLoading) return;
+
     const fetchPerifericos = async () => {
+      setLoading(true);
       try {
-        const data = await fetchAuthenticated('/api/perifericos/');
+        const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : ''; // Note: API usually uses 'sede' for admin filter based on views.py check
+        const data = await fetchAuthenticated(`/api/perifericos/${queryParams}`);
         setAllPerifericos(data);
         // Solo mostramos periféricos que NO estén asignados
         setAvailablePerifericos(data.filter((p: Periferico) => p.estado_disponibilidad === 'Disponible'));
@@ -42,7 +49,7 @@ const InventarioPerifericosPage = () => {
       }
     };
     fetchPerifericos();
-  }, []);
+  }, [sedeActiva, isSedeLoading]);
 
   // Detectar periféricos que ya tiene el empleado seleccionado
   useEffect(() => {
@@ -257,8 +264,8 @@ const InventarioPerifericosPage = () => {
                           </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded border ${p.estado_tecnico === 'Funcional'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-amber-50 text-amber-700 border-amber-100'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-amber-50 text-amber-700 border-amber-100'
                               }`}>
                               {p.estado_tecnico}
                             </span>

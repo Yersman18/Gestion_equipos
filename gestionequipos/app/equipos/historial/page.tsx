@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 
+import { useSede } from '@/app/context/SedeContext';
+
 interface HistorialMovimientoEquipo {
     id: number;
     equipo_nombre: string;
@@ -17,6 +19,7 @@ interface HistorialMovimientoEquipo {
 }
 
 const HistorialEquiposPage = () => {
+    const { sedeActiva, isLoading: isSedeLoading } = useSede();
     const [historial, setHistorial] = useState<HistorialMovimientoEquipo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -28,9 +31,13 @@ const HistorialEquiposPage = () => {
     const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
+        if (isSedeLoading) return;
+
         const fetchHistorial = async () => {
+            setLoading(true);
             try {
-                const data = await fetchAuthenticated('/api/equipos/historial/');
+                const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
+                const data = await fetchAuthenticated(`/api/equipos/historial/${queryParams}`);
                 setHistorial(data);
             } catch (err: any) {
                 setError(err.message);
@@ -39,7 +46,7 @@ const HistorialEquiposPage = () => {
             }
         };
         fetchHistorial();
-    }, []);
+    }, [sedeActiva, isSedeLoading]);
 
     // Lógica de filtrado
     const historialFiltrado = historial.filter(h => {

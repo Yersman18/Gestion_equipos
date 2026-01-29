@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 
+import { useSede } from '@/app/context/SedeContext';
+
 interface HistorialPeriferico {
   id: number;
   periferico_nombre: string;
@@ -17,6 +19,7 @@ interface HistorialPeriferico {
 }
 
 const HistorialPerifericosPage = () => {
+  const { sedeActiva, isLoading: isSedeLoading } = useSede();
   const [historial, setHistorial] = useState<HistorialPeriferico[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +32,13 @@ const HistorialPerifericosPage = () => {
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
+    if (isSedeLoading) return;
+
     const fetchHistorial = async () => {
+      setLoading(true);
       try {
-        const data = await fetchAuthenticated('/api/perifericos/historial/');
+        const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
+        const data = await fetchAuthenticated(`/api/perifericos/historial/${queryParams}`);
         setHistorial(data);
       } catch (err: any) {
         setError(err.message);
@@ -40,7 +47,7 @@ const HistorialPerifericosPage = () => {
       }
     };
     fetchHistorial();
-  }, []);
+  }, [sedeActiva, isSedeLoading]);
 
   // Obtener tipos únicos de periféricos para el filtro
   const tiposPerifericos = Array.from(new Set(historial.map(h => h.periferico_tipo).filter(Boolean)));

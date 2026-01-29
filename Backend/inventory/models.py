@@ -96,6 +96,7 @@ class Periferico(models.Model):
     estado_disponibilidad = models.CharField(max_length=50, choices=ESTADO_DISPONIBILIDAD_CHOICES, default='Disponible')
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, related_name='perifericos_asignados')
     equipo_asociado = models.ForeignKey(Equipo, on_delete=models.SET_NULL, null=True, blank=True, related_name='perifericos')
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='perifericos', verbose_name="Sede")
     fecha_entrega = models.DateTimeField(null=True, blank=True)
     notas = models.TextField(blank=True, null=True)
 
@@ -140,6 +141,7 @@ class Pasisalvo(models.Model):
     ]
 
     colaborador = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='pasisalvos_generados')
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='pasisalvos', verbose_name="Sede")
     fecha_generacion = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=50, choices=ESTADO_PASISALVO_CHOICES)
     detalles_pendientes = models.TextField(blank=True, null=True, help_text="Detalles de equipos, periféricos o mantenimientos pendientes.")
@@ -218,6 +220,7 @@ class HistorialMovimientoEquipo(models.Model):
     equipo_nombre = models.CharField(max_length=200, null=True, blank=True, verbose_name="Nombre del Equipo (Histórico)")
     equipo_serial = models.CharField(max_length=100, null=True, blank=True, verbose_name="Serial del Equipo (Histórico)")
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Empleado Asignado")
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='historial_movimientos_equipos', verbose_name="Sede")
     fecha_asignacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Asignación")
     fecha_devolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Devolución")
     observacion_devolucion = models.TextField(blank=True, null=True, verbose_name="Observación")
@@ -230,6 +233,9 @@ class HistorialMovimientoEquipo(models.Model):
                 self.equipo_nombre = self.equipo.nombre
             if not self.equipo_serial:
                 self.equipo_serial = self.equipo.serial
+            # Asignar sede automáticamente desde el equipo si no está definida
+            if not self.sede and self.equipo.sede:
+                self.sede = self.equipo.sede
         super().save(*args, **kwargs)
 
     class Meta:

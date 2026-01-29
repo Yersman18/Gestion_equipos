@@ -204,6 +204,33 @@ class PerifericoListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = PerifericoSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        """Asigna automáticamente la sede del usuario al crear un periférico."""
+        user = self.request.user
+        sede_to_assign = None
+        
+        # Verificar si el usuario es admin
+        is_admin = user.is_staff or user.is_superuser
+        try:
+            user_profile = user.profile
+            if hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN':
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            user_profile = None
+        
+        if is_admin:
+            # Si es admin, permitir asignar cualquier sede (o ninguna)
+            # La sede vendrá del request data si se proporciona
+            serializer.save()
+        else:
+            # Si es usuario normal, asignar automáticamente su sede
+            try:
+                if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+                    sede_to_assign = user_profile.sede
+            except:
+                pass
+            serializer.save(sede=sede_to_assign)
+
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
@@ -224,11 +251,17 @@ class PerifericoListCreateAPIView(generics.ListCreateAPIView):
         if is_admin:
             sede_id = self.request.query_params.get('sede')
             if sede_id:
-                queryset = queryset.filter(equipo_asociado__sede_id=sede_id)
+                # Filtrar por sede directa O por sede del equipo asociado
+                queryset = queryset.filter(
+                    Q(sede_id=sede_id) | Q(equipo_asociado__sede_id=sede_id)
+                )
             return queryset
         
         if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
-            return queryset.filter(equipo_asociado__sede=user_profile.sede)
+            # Filtrar por sede directa O por sede del equipo asociado
+            return queryset.filter(
+                Q(sede=user_profile.sede) | Q(equipo_asociado__sede=user_profile.sede)
+            )
 
         return Periferico.objects.none()
 
@@ -277,9 +310,72 @@ class LicenciaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView
 
 # Vistas para el modelo Pasisalvo
 class PasisalvoListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Pasisalvo.objects.all()
     serializer_class = PasisalvoSerializer
     permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        """Asigna automáticamente la sede y el usuario al crear un pasisalvo."""
+        user = self.request.user
+        sede_to_assign = None
+        
+        # Verificar si el usuario es admin
+        is_admin = user.is_staff or user.is_superuser
+        try:
+            user_profile = user.profile
+            if hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN':
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            user_profile = None
+        
+        # Determinar la sede a asignar
+        if not is_admin and user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            sede_to_assign = user_profile.sede
+        else:
+            # Si es admin, intentar obtener la sede del colaborador
+            colaborador_id = self.request.data.get('colaborador')
+            if colaborador_id:
+                try:
+                    from empleados.models import Empleado
+                    colaborador = Empleado.objects.get(pk=colaborador_id)
+                    sede_to_assign = colaborador.sede
+                except Empleado.DoesNotExist:
+                    pass
+        
+        serializer.save(generado_por=user, sede=sede_to_assign)
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Pasisalvo.objects.none()
+
+        is_admin = False
+        user_profile = None
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                is_admin = True
+
+        queryset = Pasisalvo.objects.all().order_by('-fecha_generacion')
+
+        if is_admin:
+            sede_id = self.request.query_params.get('sede')
+            if sede_id:
+                # Filtrar por sede directa O por sede del colaborador
+                queryset = queryset.filter(
+                    Q(sede_id=sede_id) | Q(colaborador__sede_id=sede_id)
+                )
+            return queryset
+        
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            # Filtrar por sede directa O por sede del colaborador
+            return queryset.filter(
+                Q(sede=user_profile.sede) | Q(colaborador__sede=user_profile.sede)
+            )
+
+        return Pasisalvo.objects.none()
 
 class PasisalvoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Pasisalvo.objects.all()
@@ -292,6 +388,40 @@ class HistorialPerifericoListAPIView(generics.ListAPIView):
     serializer_class = HistorialPerifericoSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        user = self.request.user
+        queryset = HistorialPeriferico.objects.all()
+
+        is_admin = False
+        user_profile = None
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                is_admin = True
+        
+        if is_admin:
+            # Allow admins to filter by sede_id
+            sede_id = self.request.query_params.get('sede_id')
+            if sede_id:
+                # Filter by equipment's sede OR employee's sede
+                queryset = queryset.filter(
+                    Q(equipo_asociado__sede_id=sede_id) | 
+                    Q(empleado_asignado__sede_id=sede_id)
+                )
+            return queryset
+
+        # Non-admins: filter by their own sede
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+             return queryset.filter(
+                Q(equipo_asociado__sede=user_profile.sede) | 
+                Q(empleado_asignado__sede=user_profile.sede)
+            )
+
+        return HistorialPeriferico.objects.none()
+
 class HistorialMovimientoEquipoListAPIView(generics.ListAPIView):
     queryset = HistorialMovimientoEquipo.objects.all()
     serializer_class = HistorialMovimientoEquipoSerializer
@@ -300,21 +430,39 @@ class HistorialMovimientoEquipoListAPIView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         queryset = HistorialMovimientoEquipo.objects.all()
-
+        
+        is_admin = False
+        user_profile = None
         try:
             user_profile = user.profile
-            # Si no es admin, filtrar por sede de los equipos
-            if not (user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN')):
-                if hasattr(user_profile, 'sede') and user_profile.sede:
-                    # Filtramos por la sede del equipo al que pertenece el movimiento
-                    queryset = queryset.filter(equipo__sede=user_profile.sede)
-                else:
-                    return HistorialMovimientoEquipo.objects.none()
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
         except UserProfile.DoesNotExist:
-            if not (user.is_staff or user.is_superuser):
-                return HistorialMovimientoEquipo.objects.none()
+            if user.is_staff or user.is_superuser:
+                is_admin = True
 
-        return queryset
+        if is_admin:
+             # Allow admins to filter by sede_id
+            sede_id = self.request.query_params.get('sede_id')
+            if sede_id:
+                # Filtrar por sede directa, equipo__sede o empleado__sede
+                queryset = queryset.filter(
+                    Q(sede_id=sede_id) |
+                    Q(equipo__sede_id=sede_id) |
+                    Q(empleado_asignado__sede_id=sede_id)
+                )
+            return queryset
+
+        # Si no es admin, filtrar por sede del usuario
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            # Filtrar por sede directa, equipo__sede o empleado__sede
+            return queryset.filter(
+                Q(sede=user_profile.sede) |
+                Q(equipo__sede=user_profile.sede) |
+                Q(empleado_asignado__sede=user_profile.sede)
+            )
+
+        return HistorialMovimientoEquipo.objects.none()
 
 from datetime import datetime, timedelta
 
@@ -389,11 +537,14 @@ class DashboardStatsView(APIView):
             estado_mantenimiento__in=['Pendiente', 'En proceso']
         ).count()
 
-        # Mantenimientos VENCIDOS: Estado Pendiente y fecha_inicio < hoy
+        # Mantenimientos VENCIDOS: Estado Pendiente
+        # Ajuste: Si tiene fecha de finalización (estimada), se usa esa como límite.
         today = timezone.now().date()
         mantenimientos_vencidos = mantenimientos_qs.filter(
-            estado_mantenimiento='Pendiente',
-            fecha_inicio__lt=today
+            estado_mantenimiento='Pendiente'
+        ).filter(
+            Q(fecha_finalizacion__isnull=False, fecha_finalizacion__lt=today) |
+            Q(fecha_finalizacion__isnull=True, fecha_inicio__lt=today)
         ).count()
 
         # Para los próximos mantenimientos (próximos 30 días)

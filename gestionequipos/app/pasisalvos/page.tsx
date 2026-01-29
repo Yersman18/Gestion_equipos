@@ -7,6 +7,8 @@ import { fetchAuthenticated } from '@/app/utils/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+import { useSede } from '@/app/context/SedeContext';
+
 interface Pasisalvo {
     id: number;
     colaborador_info: {
@@ -20,15 +22,20 @@ interface Pasisalvo {
 }
 
 const PasisalvosPage = () => {
+    const { sedeActiva, isLoading: isSedeLoading } = useSede();
     const [pasisalvos, setPasisalvos] = useState<Pasisalvo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
+        if (isSedeLoading) return;
+
         const fetchPasisalvos = async () => {
+            setLoading(true);
             try {
-                const data = await fetchAuthenticated('/api/pasisalvos/');
+                const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : '';
+                const data = await fetchAuthenticated(`/api/pasisalvos/${queryParams}`);
                 // Nota: Asumiendo que el serializador devuelve colaborador_info. Si no, ajustaremos.
                 setPasisalvos(data);
             } catch (err: any) {
@@ -38,7 +45,7 @@ const PasisalvosPage = () => {
             }
         };
         fetchPasisalvos();
-    }, []);
+    }, [sedeActiva, isSedeLoading]);
 
     const filteredPasisalvos = pasisalvos.filter(p =>
         p.colaborador_info?.nombre_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,8 +111,8 @@ const PasisalvosPage = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${p.estado === 'Aprobado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                                    p.estado === 'Con Pendientes' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                        'bg-red-100 text-red-700 border-red-200'
+                                                p.estado === 'Con Pendientes' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                                    'bg-red-100 text-red-700 border-red-200'
                                                 }`}>
                                                 {p.estado}
                                             </span>

@@ -113,15 +113,16 @@ class MantenimientoSerializer(serializers.ModelSerializer):
 class PerifericoSerializer(serializers.ModelSerializer):
     empleado_asignado_info = serializers.SerializerMethodField()
     equipo_asociado_serial = serializers.CharField(source='equipo_asociado.serial', read_only=True, allow_null=True)
+    sede_nombre = serializers.CharField(source='sede.nombre', read_only=True, allow_null=True)
 
     class Meta:
         model = Periferico
         fields = [
             'id', 'nombre', 'tipo', 'estado_tecnico', 'estado_disponibilidad',
             'empleado_asignado', 'empleado_asignado_info', 'equipo_asociado',
-            'equipo_asociado_serial', 'fecha_entrega', 'notas'
+            'equipo_asociado_serial', 'sede', 'sede_nombre', 'fecha_entrega', 'notas'
         ]
-        read_only_fields = ['empleado_asignado_info', 'equipo_asociado_serial']
+        read_only_fields = ['empleado_asignado_info', 'equipo_asociado_serial', 'sede_nombre']
 
     def get_empleado_asignado_info(self, obj):
         if obj.empleado_asignado:

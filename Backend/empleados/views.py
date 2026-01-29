@@ -9,6 +9,33 @@ class EmpleadoListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EmpleadoSerializer
     permission_classes = [IsAuthenticated] # ASEGURAR VISTA
 
+    def perform_create(self, serializer):
+        """Asigna automáticamente la sede del usuario al crear un empleado."""
+        user = self.request.user
+        sede_to_assign = None
+        
+        # Verificar si el usuario es admin
+        is_admin = user.is_staff or user.is_superuser
+        try:
+            user_profile = user.profile
+            if hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN':
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            user_profile = None
+        
+        if is_admin:
+            # Si es admin, permitir asignar cualquier sede (o ninguna)
+            # La sede vendrá del request data si se proporciona
+            serializer.save()
+        else:
+            # Si es usuario normal, asignar automáticamente su sede
+            try:
+                if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+                    sede_to_assign = user_profile.sede
+            except:
+                pass
+            serializer.save(sede=sede_to_assign)
+
     def get_queryset(self):
         user = self.request.user
         

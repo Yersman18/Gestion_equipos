@@ -29,7 +29,7 @@ interface Licencia {
 }
 
 const LicenciasPage = () => {
-    const { sedeActiva } = useSede();
+    const { sedeActiva, isLoading: isSedeLoading } = useSede();
     const { user } = useAuth();
     const [licencias, setLicencias] = useState<Licencia[]>([]);
     const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -48,9 +48,11 @@ const LicenciasPage = () => {
     });
 
     useEffect(() => {
-        fetchLicencias();
-        fetchEquipos();
-    }, [sedeActiva]);
+        if (!isSedeLoading) {
+            fetchLicencias();
+            fetchEquipos();
+        }
+    }, [sedeActiva, isSedeLoading]);
 
     const fetchLicencias = async () => {
         setLoading(true);
@@ -204,7 +206,7 @@ const LicenciasPage = () => {
                                             </td>
                                             <td className="p-6">
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${lic.estado === 'Activa' ? 'bg-emerald-100 text-emerald-700' :
-                                                        lic.estado === 'Vencida' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                                    lic.estado === 'Vencida' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                                                     }`}>
                                                     {lic.estado}
                                                 </span>
