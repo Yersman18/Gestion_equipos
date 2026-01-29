@@ -84,10 +84,12 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             )
 
         data = request.data.copy()
-        if 'fecha_finalizacion' in data and data['fecha_finalizacion']:
+        
+        # Si se está marcando como finalizado desde el update general
+        if data.get('estado_mantenimiento') == 'Finalizado' or data.get('fecha_finalizacion'):
+            if not instance.fecha_real_finalizacion:
+                instance.fecha_real_finalizacion = timezone.now().date()
             data['estado_mantenimiento'] = 'Finalizado'
-
-        # No asignamos evidencias_uploads a data, el serializer las obtendrá directamente de request.FILES
 
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -135,7 +137,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Obtener el archivo de evidencia de finalización
+        # Obtener el archivo de evidencia de finalización (opcional u obligatorio según requerimiento, aquí lo mantenemos como en el original)
         evidencia_file = request.FILES.get('evidencia_finalizacion')
         if not evidencia_file:
             return Response(
@@ -145,7 +147,8 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
         # Actualizar el mantenimiento
         instance.estado_mantenimiento = 'Finalizado'
-        instance.fecha_finalizacion = timezone.now().date()
+        # IMPORTANTE: Guardamos en fecha_real_finalizacion, NO sobreescribimos fecha_finalizacion
+        instance.fecha_real_finalizacion = timezone.now().date()
         instance.evidencia_finalizacion = evidencia_file
         instance.save()
 

@@ -12,7 +12,7 @@ from mantenimientos.models import Mantenimiento
 from .models import Equipo, Periferico, Licencia, Pasisalvo, HistorialPeriferico, HistorialEquipo, HistorialMovimientoEquipo
 from usuarios.models import UserProfile
 from usuarios.permissions import IsAdminOrOwnerBySede # <-- IMPORTAR
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F
 from .serializers import SedeSerializer, EquipoSerializer, MantenimientoSerializer, PerifericoSerializer, LicenciaSerializer, PasisalvoSerializer, HistorialPerifericoSerializer, HistorialEquipoSerializer, HistorialMovimientoEquipoSerializer
 import django_filters.rest_framework
 from rest_framework import viewsets
@@ -66,23 +66,28 @@ class EquipoViewSet(viewsets.ModelViewSet):
         # 1. Base queryset
         queryset = Equipo.objects.filter(activo=True).order_by('nombre')
 
-        # 3. Apply user-specific filtering (non-admins see only their sede)
+        # 2. Check if user is admin
+        is_admin = False
         try:
             user_profile = user.profile
-            # Si no es admin/superuser, filtrar por sede del perfil
-            if not (user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN')):
-                if hasattr(user_profile, 'sede') and user_profile.sede:
-                    queryset = queryset.filter(sede=user_profile.sede)
-                else:
-                    # Si no es admin y no tiene sede, no ve nada
-                    return Equipo.objects.none()
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
         except UserProfile.DoesNotExist:
-            # Si no tiene perfil y no es admin, no ve nada
-            if not (user.is_staff or user.is_superuser):
-                return Equipo.objects.none()
+            if user.is_staff or user.is_superuser:
+                is_admin = True
 
-        # El resto de los filtros (como 'sede' en la URL) serán manejados por DjangoFilterBackend
-        return queryset
+        if is_admin:
+            # Admins see everything unless a sede filter is applied
+            sede_id = self.request.query_params.get('sede') or self.request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
+                queryset = queryset.filter(sede_id=sede_id)
+            return queryset
+
+        # 3. Apply user-specific filtering for non-admins
+        if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
+            return queryset.filter(sede=user_profile.sede)
+        
+        return Equipo.objects.none()
     
     def get_permissions(self):
         """
@@ -249,8 +254,8 @@ class PerifericoListCreateAPIView(generics.ListCreateAPIView):
         queryset = Periferico.objects.all()
 
         if is_admin:
-            sede_id = self.request.query_params.get('sede')
-            if sede_id:
+            sede_id = self.request.query_params.get('sede') or self.request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
                 # Filtrar por sede directa O por sede del equipo asociado
                 queryset = queryset.filter(
                     Q(sede_id=sede_id) | Q(equipo_asociado__sede_id=sede_id)
@@ -293,8 +298,8 @@ class LicenciaListCreateAPIView(generics.ListCreateAPIView):
         queryset = Licencia.objects.all()
 
         if is_admin:
-            sede_id = self.request.query_params.get('sede')
-            if sede_id:
+            sede_id = self.request.query_params.get('sede') or self.request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
                 queryset = queryset.filter(equipo_asociado__sede_id=sede_id)
             return queryset
         
@@ -361,8 +366,8 @@ class PasisalvoListCreateAPIView(generics.ListCreateAPIView):
         queryset = Pasisalvo.objects.all().order_by('-fecha_generacion')
 
         if is_admin:
-            sede_id = self.request.query_params.get('sede')
-            if sede_id:
+            sede_id = self.request.query_params.get('sede') or self.request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
                 # Filtrar por sede directa O por sede del colaborador
                 queryset = queryset.filter(
                     Q(sede_id=sede_id) | Q(colaborador__sede_id=sede_id)
@@ -403,9 +408,9 @@ class HistorialPerifericoListAPIView(generics.ListAPIView):
                 is_admin = True
         
         if is_admin:
-            # Allow admins to filter by sede_id
-            sede_id = self.request.query_params.get('sede_id')
-            if sede_id:
+            # Allow admins to filter by sede_id or sede
+            sede_id = self.request.query_params.get('sede_id') or self.request.query_params.get('sede')
+            if sede_id and sede_id != '0':
                 # Filter by equipment's sede OR employee's sede
                 queryset = queryset.filter(
                     Q(equipo_asociado__sede_id=sede_id) | 
@@ -442,9 +447,9 @@ class HistorialMovimientoEquipoListAPIView(generics.ListAPIView):
                 is_admin = True
 
         if is_admin:
-             # Allow admins to filter by sede_id
-            sede_id = self.request.query_params.get('sede_id')
-            if sede_id:
+             # Allow admins to filter by sede_id or sede
+            sede_id = self.request.query_params.get('sede_id') or self.request.query_params.get('sede')
+            if sede_id and sede_id != '0':
                 # Filtrar por sede directa, equipo__sede o empleado__sede
                 queryset = queryset.filter(
                     Q(sede_id=sede_id) |
@@ -504,8 +509,8 @@ class DashboardStatsView(APIView):
                 return Response({"detail": "Usuario sin sede asignada."}, status=403)
         else:
             # Si es admin, puede opcionalmente filtrar por sede_id en la URL
-            sede_id = request.query_params.get('sede_id')
-            if sede_id:
+            sede_id = request.query_params.get('sede') or request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
                 try:
                     target_sede = Sede.objects.get(id=sede_id)
                     equipos_qs = equipos_qs.filter(sede=target_sede)
@@ -565,6 +570,12 @@ class DashboardStatsView(APIView):
             fecha_vencimiento__lte=today + timedelta(days=30)
         ).count()
 
+        # Mantenimientos finalizados TARDE
+        mantenimientos_finalizados_tarde = mantenimientos_qs.filter(
+            estado_mantenimiento='Finalizado',
+            fecha_real_finalizacion__gt=F('fecha_finalizacion')
+        ).count()
+
         stats = {
             'total_equipos': total_equipos,
             'equipos_dados_de_baja': equipos_dados_de_baja,
@@ -575,6 +586,7 @@ class DashboardStatsView(APIView):
             'proximos_mantenimientos': proximos_mantenimientos,
             'mantenimientos_activos': mantenimientos_activos,
             'mantenimientos_vencidos': mantenimientos_vencidos,
+            'mantenimientos_finalizados_tarde': mantenimientos_finalizados_tarde,
             'licencias_vencidas': licencias_vencidas,
             'licencias_por_vencer': licencias_por_vencer,
             'equipos_por_estado': list(equipos_por_estado),

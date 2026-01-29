@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
 import { EmpleadoSelector } from '@/components/EmpleadoSelector';
+import { useSede } from '@/app/context/SedeContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -33,11 +34,13 @@ interface EquipmentItem {
 
 const GenerarPasisalvoPage = () => {
     const router = useRouter();
+    const { sedeActiva } = useSede();
     const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<number | ''>('');
     const [empleadoData, setEmpleadoData] = useState<Empleado | null>(null);
     const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [statusInfo, setStatusInfo] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Campos editables del colaborador
     const [ciudad, setCiudad] = useState('');
@@ -64,12 +67,11 @@ const GenerarPasisalvoPage = () => {
             setFechaIngreso(data.empleado.fecha_ingreso || '');
             setFechaRetiro(data.empleado.fecha_retiro || '');
 
-            // Construir lista de equipos basada en el historial de entregas (lo que ya devolvió)
             const list: EquipmentItem[] = data.entregados_historial.map((h: any) => ({
-                tipo: 'Equipo', // Simplificado, podríamos ser más precisos
+                tipo: 'Equipo',
                 marca_modelo: h.equipo_nombre,
                 serial: h.equipo_serial,
-                accesorios: 'Cargador, Mouse (N/A)', // Placeholder para que el usuario llene
+                accesorios: 'Cargador, Mouse (N/A)',
                 estado: 'Funcional',
                 observaciones: h.observacion_devolucion || ''
             }));
@@ -101,133 +103,162 @@ const GenerarPasisalvoPage = () => {
 
         const doc = new jsPDF() as any;
         const pageWidth = doc.internal.pageSize.getWidth();
-
-        // --- ESTILOS Y COLORES ---
-        // Verde más oscuro y profesional (Forest/Emerald Dark) en lugar de fluorescente
         const primaryColor: [number, number, number] = [21, 128, 61];
 
-        const generateWithLogo = () => {
-            const logo = new Image();
-            logo.src = '/img/logo.png';
+        const logo = new Image();
+        logo.src = '/img/logo.png';
 
-            logo.onload = () => {
-                // --- ENCABEZADO CON LOGO ---
-                doc.addImage(logo, 'PNG', 20, 12, 35, 12);
+        logo.onload = () => {
+            doc.addImage(logo, 'PNG', 20, 12, 35, 12);
 
-                doc.setFontSize(22);
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.setFont('helvetica', 'bold');
-                doc.text('INTEGRA S.A.S.', pageWidth - 20, 20, { align: 'right' });
+            // Cuadro estilizado para el código de control (Arriba Izquierda)
+            doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFillColor(240, 253, 244); // Verde muy suave
+            doc.roundedRect(20, 26, 40, 10, 1, 1, 'FD');
+            doc.setFontSize(7);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('CONTROL DE CALIDAD', 22, 30);
+            doc.setFontSize(8);
+            doc.text('FORM-GTI-017 - V1', 22, 34);
 
-                doc.setFontSize(14);
-                doc.setTextColor(100);
-                doc.text('Paz y Salvo – Área de Tecnología', pageWidth - 20, 30, { align: 'right' });
+            doc.setFontSize(22);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INTEGRA S.A.S.', pageWidth - 20, 20, { align: 'right' });
+            doc.setFontSize(14);
+            doc.setTextColor(100);
+            doc.text('Paz y Salvo – Área de Tecnología', pageWidth - 20, 30, { align: 'right' });
+            doc.setFontSize(9);
+            doc.text(`Fecha de generación automática: ${format(new Date(), "dd 'de' MMMM, yyyy", { locale: es })}`, pageWidth - 20, 38, { align: 'right' });
+            doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setLineWidth(1.5);
+            doc.line(20, 45, pageWidth - 20, 45);
 
-                doc.setFontSize(9);
-                doc.text(`Fecha de generación: ${format(new Date(), "dd 'de' MMMM, yyyy", { locale: es })}`, pageWidth - 20, 38, { align: 'right' });
+            doc.setFontSize(11);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('1. INFORMACIÓN DEL COLABORADOR', 20, 55);
 
-                doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.setLineWidth(1.5);
-                doc.line(20, 45, pageWidth - 20, 45);
+            doc.setFontSize(10);
+            doc.setTextColor(50);
+            doc.setFont('helvetica', 'normal');
+            const colInfoY = 65;
+            const leftCol = 25;
+            const rightCol = 110;
+            doc.text(`Nombre Completo: ${empleadoData.nombre} ${empleadoData.apellido}`, leftCol, colInfoY);
+            doc.text(`Número de Documento: ${empleadoData.cedula}`, leftCol, colInfoY + 7);
+            doc.text(`Cargo: ${empleadoData.cargo}`, leftCol, colInfoY + 14);
+            doc.text(`Área o Proceso: ${empleadoData.area}`, leftCol, colInfoY + 21);
+            doc.text(`Ciudad: ${ciudad}`, rightCol, colInfoY);
+            doc.text(`Fecha de Ingreso: ${fechaIngreso ? format(new Date(fechaIngreso), 'dd/MM/yyyy') : 'N/A'}`, rightCol, colInfoY + 7);
+            doc.text(`Fecha de Retiro: ${fechaRetiro ? format(new Date(fechaRetiro), 'dd/MM/yyyy') : 'N/A'}`, rightCol, colInfoY + 14);
 
-                // --- INFORMACIÓN DEL COLABORADOR ---
-                doc.setFontSize(11);
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.setFont('helvetica', 'bold');
-                doc.text('1. INFORMACIÓN DEL COLABORADOR', 20, 55);
+            doc.setFontSize(11);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('2. EQUIPOS TECNOLÓGICOS ENTREGADOS', 20, 100);
 
-                doc.setFontSize(10);
-                doc.setTextColor(50);
-                doc.setFont('helvetica', 'normal');
+            const tableData = equipmentList.map(item => [item.tipo, item.marca_modelo, item.serial, item.accesorios, item.estado, item.observaciones]);
+            autoTable(doc, {
+                startY: 105,
+                head: [['Tipo de Activo', 'Marca y Modelo', 'N° Serie', 'Accesorios', 'Estado', 'Observaciones']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 9 },
+                styles: { fontSize: 8, cellPadding: 3 },
+                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 30 }, 4: { cellWidth: 20 }, 5: { cellWidth: 'auto' } }
+            });
 
-                const colInfoY = 65;
-                const leftCol = 25;
-                const rightCol = 110;
+            const finalY = (doc as any).lastAutoTable.finalY + 15;
+            doc.setFontSize(11);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('ORDEN DE PAZ Y SALVO:', 20, finalY);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(80);
+            const declaration = `Por medio de la presente, el área de Tecnología de INTEGRA S.A.S. certifica que el colaborador mencionado anteriormente ha realizado la entrega formal de los activos tecnológicos que se encontraban bajo su responsabilidad. Tras la revisión técnica satisfactoria, se declara que el colaborador queda a PAZ Y SALVO con el departamento de TI en lo referente a la devolución de equipos y elementos de trabajo.`;
+            const splitText = doc.splitTextToSize(declaration, pageWidth - 40);
+            doc.text(splitText, 20, finalY + 7);
 
-                doc.text(`Nombre Completo: ${empleadoData.nombre} ${empleadoData.apellido}`, leftCol, colInfoY);
-                doc.text(`Número de Documento: ${empleadoData.cedula}`, leftCol, colInfoY + 7);
-                doc.text(`Cargo: ${empleadoData.cargo}`, leftCol, colInfoY + 14);
-                doc.text(`Área o Proceso: ${empleadoData.area}`, leftCol, colInfoY + 21);
+            const signatureY = finalY + 50;
+            doc.setDrawColor(200);
 
-                doc.text(`Ciudad: ${ciudad}`, rightCol, colInfoY);
-                doc.text(`Fecha de Ingreso: ${fechaIngreso ? format(new Date(fechaIngreso), 'dd/MM/yyyy') : 'N/A'}`, rightCol, colInfoY + 7);
-                doc.text(`Fecha de Retiro: ${fechaRetiro ? format(new Date(fechaRetiro), 'dd/MM/yyyy') : 'N/A'}`, rightCol, colInfoY + 14);
+            // Columna Izquierda: Firma Colaborador
+            doc.line(20, signatureY, 85, signatureY);
+            doc.setTextColor(50);
+            doc.text('Firma del Colaborador', 20, signatureY + 5);
+            doc.text(`CC: ${empleadoData.cedula}`, 20, signatureY + 10);
 
-                // --- TABLA DE EQUIPOS ---
-                doc.setFontSize(11);
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.setFont('helvetica', 'bold');
-                doc.text('2. EQUIPOS TECNOLÓGICOS ENTREGADOS', 20, 100);
+            // Área de Fecha Manual Estilizada (Llamativa)
+            doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setLineWidth(0.5);
+            doc.line(20, signatureY + 22, 85, signatureY + 22);
+            doc.setFontSize(8);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.text('FECHA DE FIRMA (Día / Mes / Año):', 20, signatureY + 18);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(150);
+            doc.text('      /      / 202__', 70, signatureY + 18);
 
-                const tableData = equipmentList.map(item => [
-                    item.tipo,
-                    item.marca_modelo,
-                    item.serial,
-                    item.accesorios,
-                    item.estado,
-                    item.observaciones
-                ]);
+            // Columna Derecha: Firma TI
+            doc.setFontSize(10);
+            doc.line(115, signatureY, 190, signatureY);
+            doc.text('Nombre y Firma Responsable TI', 115, signatureY + 5);
+            doc.text('Área de Tecnología', 115, signatureY + 10);
 
-                autoTable(doc, {
-                    startY: 105,
-                    head: [['Tipo de Activo', 'Marca y Modelo', 'N° Serie', 'Accesorios', 'Estado', 'Observaciones']],
-                    body: tableData,
-                    theme: 'grid',
-                    headStyles: { fillColor: primaryColor, textColor: 255, fontSize: 9 },
-                    styles: { fontSize: 8, cellPadding: 3 },
-                    columnStyles: {
-                        0: { cellWidth: 25 },
-                        1: { cellWidth: 35 },
-                        2: { cellWidth: 25 },
-                        3: { cellWidth: 30 },
-                        4: { cellWidth: 20 },
-                        5: { cellWidth: 'auto' }
-                    }
-                });
+            doc.setFontSize(8);
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.text(`Este documento certifica únicamente la devolución física de activos tecnológicos.`, pageWidth / 2, signatureY + 35, { align: 'center' });
 
-                const finalY = (doc as any).lastAutoTable.finalY + 15;
-
-                // --- DECLARACIÓN FINAL ---
-                doc.setFontSize(11);
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.setFont('helvetica', 'bold');
-                doc.text('ORDEN DE PAZ Y SALVO:', 20, finalY);
-
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(80);
-                const declaration = `Por medio de la presente, el área de Tecnología de INTEGRA S.A.S. certifica que el colaborador mencionado anteriormente ha realizado la entrega formal de los activos tecnológicos que se encontraban bajo su responsabilidad. Tras la revisión técnica satisfactoria, se declara que el colaborador queda a PAZ Y SALVO con el departamento de TI en lo referente a la devolución de equipos y elementos de trabajo.`;
-
-                const splitText = doc.splitTextToSize(declaration, pageWidth - 40);
-                doc.text(splitText, 20, finalY + 7);
-
-                // --- SECCIÓN DE FIRMAS ---
-                const signatureY = finalY + 50;
-
-                doc.setDrawColor(200);
-                doc.line(20, signatureY, 85, signatureY);
-                doc.setTextColor(50);
-                doc.text('Firma del Colaborador', 20, signatureY + 5);
-                doc.text(`CC: ${empleadoData.cedula}`, 20, signatureY + 10);
-
-                doc.line(115, signatureY, 190, signatureY);
-                doc.text('Nombre y Firma Responsable TI', 115, signatureY + 5);
-                doc.text('Área de Tecnología', 115, signatureY + 10);
-
-                doc.setFontSize(8);
-                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-                doc.text(`Este documento certifica únicamente la devolución física de activos tecnológicos.`, pageWidth / 2, signatureY + 25, { align: 'center' });
-
-                // Guardar PDF
-                doc.save(`Paz_y_Salvo_${empleadoData.nombre}_${empleadoData.apellido}.pdf`);
-            };
-
-            logo.onerror = () => {
-                alert("No se pudo cargar el logo de la empresa. Se generará el PDF sin logo.");
-                doc.save(`Paz_y_Salvo_${empleadoData.nombre}_${empleadoData.apellido}.pdf`);
-            };
+            doc.save(`Paz_y_Salvo_${empleadoData.nombre}_${empleadoData.apellido}.pdf`);
         };
 
-        generateWithLogo();
+        logo.onerror = () => {
+            alert("No se pudo cargar el logo. Se generará el PDF sin él.");
+            generatePDF(); // Reintentar sin el logo
+        };
+    };
+
+    const handleGeneratePazYSalvo = async () => {
+        if (!selectedEmpleadoId || !statusInfo) {
+            alert("Por favor, seleccione un colaborador.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        const isApproved = statusInfo.esta_a_paz_y_salvo;
+        let pendingDetails = '';
+        if (!isApproved) {
+            const { equipos, perifericos } = statusInfo.pendientes;
+            const equipoDetails = equipos.map((e: any) => `Equipo: ${e.nombre} (${e.serial})`).join(', ');
+            const perifericoDetails = perifericos.map((p: any) => `Periférico: ${p.nombre} (${p.tipo})`).join(', ');
+            pendingDetails = `Pendientes: ${[equipoDetails, perifericoDetails].filter(Boolean).join('; ')}`;
+        }
+
+        const payload = {
+            colaborador: selectedEmpleadoId,
+            estado: isApproved ? 'Aprobado' : 'Con Pendientes',
+            detalles_pendientes: pendingDetails,
+            sede: statusInfo.empleado.sede || null, // Asignamos la sede del colaborador al paz y salvo
+        };
+
+        try {
+            await fetchAuthenticated('/api/pasisalvos/', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            alert('Paz y salvo registrado exitosamente. Ahora se generará el PDF.');
+            generatePDF();
+            router.push('/pasisalvos');
+        } catch (error: any) {
+            alert(`Error al registrar el paz y salvo: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
 
@@ -253,6 +284,7 @@ const GenerarPasisalvoPage = () => {
                             selectedEmpleadoId={selectedEmpleadoId}
                             onSelectEmpleado={setSelectedEmpleadoId}
                             onEmpleadoChange={() => { }}
+                            sedeId={sedeActiva?.id !== 0 ? sedeActiva?.id : undefined}
                         />
 
                         {statusInfo && !statusInfo.esta_a_paz_y_salvo && (
@@ -344,16 +376,28 @@ const GenerarPasisalvoPage = () => {
                                     Cancelar
                                 </button>
                                 <button
-                                    onClick={generatePDF}
-                                    disabled={!statusInfo?.esta_a_paz_y_salvo}
-                                    className={`font-black py-4 px-12 rounded-2xl shadow-xl transition-all duration-300 flex items-center gap-3 ${statusInfo?.esta_a_paz_y_salvo
-                                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white hover:shadow-2xl hover:-translate-y-1'
-                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                    onClick={handleGeneratePazYSalvo}
+                                    disabled={!statusInfo?.esta_a_paz_y_salvo || isSubmitting}
+                                    className={`font-black py-4 px-12 rounded-2xl shadow-xl transition-all duration-300 flex items-center gap-3 ${statusInfo?.esta_a_paz_y_salvo && !isSubmitting
+                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white hover:shadow-2xl hover:-translate-y-1'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
                                         }`}
                                     title={!statusInfo?.esta_a_paz_y_salvo ? "No se puede generar: El colaborador tiene activos pendientes" : ""}
                                 >
-                                    <span className="text-2xl">📥</span>
-                                    Generar PDF de Paz y Salvo
+                                    {isSubmitting ? (
+                                        <>
+                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Registrando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-2xl">📥</span>
+                                            Generar y Registrar
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </>

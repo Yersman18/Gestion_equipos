@@ -428,18 +428,18 @@ export default function EditarEquipoPage() {
       {/* Diagnóstico de Salud Técnica */}
       {equipoData && (
         <div className={`mb-8 border-l-4 rounded-2xl p-6 shadow-sm flex items-center justify-between ${equipoData.diagnostico_salud?.color === 'green' ? 'bg-emerald-50 border-emerald-500' :
-            equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-50 border-amber-500' : 'bg-red-50 border-red-500'
+          equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-50 border-amber-500' : 'bg-red-50 border-red-500'
           }`}>
           <div className="flex items-center gap-4">
             <div className={`p-4 rounded-2xl text-3xl ${equipoData.diagnostico_salud?.color === 'green' ? 'bg-emerald-100' :
-                equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-100' : 'bg-red-100'
+              equipoData.diagnostico_salud?.color === 'yellow' ? 'bg-amber-100' : 'bg-red-100'
               }`}>
               {equipoData.diagnostico_salud?.color === 'green' ? '🛡️' :
                 equipoData.diagnostico_salud?.color === 'yellow' ? '⚠️' : '🚨'}
             </div>
             <div>
               <h3 className={`text-xl font-black uppercase tracking-tight ${equipoData.diagnostico_salud?.color === 'green' ? 'text-emerald-800' :
-                  equipoData.diagnostico_salud?.color === 'yellow' ? 'text-amber-800' : 'text-red-800'
+                equipoData.diagnostico_salud?.color === 'yellow' ? 'text-amber-800' : 'text-red-800'
                 }`}>
                 Estado de Salud: {equipoData.diagnostico_salud?.rango}
               </h3>
@@ -619,7 +619,7 @@ export default function EditarEquipoPage() {
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all bg-white"
                   >
                     <option value="" disabled>Seleccione una sede</option>
-                    {sedesParaFormulario.map((s: Sede) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                    {sedesParaFormulario.filter(s => s.id !== 0).map((s: Sede) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                   </select>
                 </div>
 

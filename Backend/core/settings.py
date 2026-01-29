@@ -159,5 +159,5 @@ CORS_ALLOWED_ORIGINS = [
 
 # Media Files Settings
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR
+MEDIA_ROOT = BASE_DIR / 'media'
 

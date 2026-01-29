@@ -2,19 +2,17 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '../app/context/AuthContext';
 
+import { useSede } from '../app/context/SedeContext';
+
 interface NavbarProps {
   toggleSidebar: () => void;
 }
 
 export function Navbar({ toggleSidebar }: NavbarProps) {
-  const { user, logout } = useAuth(); // Usamos el contexto de autenticación
+  const { user, logout } = useAuth();
+  const { sedeActiva, sedesPermitidas, setSedeActiva } = useSede();
   const [showDropdown, setShowDropdown] = useState(false);
-
-  // La lógica del botón de logout ahora la maneja el contexto
-  // const handleLogout = () => {
-  //   localStorage.removeItem('authToken');
-  //   router.push('/login');
-  // };
+  const [showSedeDropdown, setShowSedeDropdown] = useState(false);
 
   return (
     <header className="bg-gradient-to-r from-green-500 via-green-600 to-green-500 shadow-lg h-16 flex items-center justify-between px-4 md:px-6">
@@ -25,16 +23,45 @@ export function Navbar({ toggleSidebar }: NavbarProps) {
         </svg>
       </button>
 
-      {/* Visualizador de Sede (ya no es un selector) */}
+      {/* Selector de Sede */}
       <div className="relative hidden md:block">
-        <div
-          className="bg-white/20 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 border border-white/30"
-        >
-          <span>Sede:</span>
-          {/* Mostramos la sede del usuario desde el contexto */}
-          <span className="font-bold">{user?.sede?.nombre || 'Cargando...'}</span>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => sedesPermitidas.length > 1 && setShowSedeDropdown(!showSedeDropdown)}
+            className={`bg-white/20 text-white font-semibold py-2 px-4 rounded-lg flex items-center space-x-2 border border-white/30 transition-all ${sedesPermitidas.length > 1 ? 'hover:bg-white/30' : ''
+              }`}
+          >
+            <span>Sede:</span>
+            <span className="font-bold">{sedeActiva?.nombre || 'Sin sede'}</span>
+            {sedesPermitidas.length > 1 && (
+              <svg className={`w-4 h-4 transform transition-transform ${showSedeDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            )}
+          </button>
         </div>
+
+        {showSedeDropdown && sedesPermitidas.length > 1 && (
+          <div className="absolute top-full left-0 mt-2 bg-white rounded-lg shadow-xl py-2 w-56 z-50 border border-gray-200">
+            {sedesPermitidas.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  setSedeActiva(s);
+                  setShowSedeDropdown(false);
+                  window.location.reload(); // Recargar para aplicar filtros globales
+                }}
+                className={`w-full text-left px-4 py-2 hover:bg-green-50 transition-colors flex items-center justify-between ${sedeActiva?.id === s.id ? 'text-green-600 font-bold bg-green-50/50' : 'text-gray-700'
+                  }`}
+              >
+                <span>{s.nombre}</span>
+                {sedeActiva?.id === s.id && <span>✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
 
       {/* Página Principal Badge */}
       <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">

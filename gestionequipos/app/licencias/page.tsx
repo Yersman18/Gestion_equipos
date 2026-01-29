@@ -57,7 +57,7 @@ const LicenciasPage = () => {
     const fetchLicencias = async () => {
         setLoading(true);
         try {
-            const url = sedeActiva ? `/api/licencias/?sede_id=${sedeActiva.id}` : '/api/licencias/';
+            const url = (sedeActiva && sedeActiva.id !== 0) ? `/api/licencias/?sede_id=${sedeActiva.id}` : '/api/licencias/';
             const data = await fetchAuthenticated(url);
             setLicencias(data);
         } catch (err) {
@@ -69,7 +69,7 @@ const LicenciasPage = () => {
 
     const fetchEquipos = async () => {
         try {
-            const url = sedeActiva ? `/api/equipos/?sede_id=${sedeActiva.id}` : '/api/equipos/';
+            const url = (sedeActiva && sedeActiva.id !== 0) ? `/api/equipos/?sede_id=${sedeActiva.id}` : '/api/equipos/';
             const data = await fetchAuthenticated(url);
             // Si el backend devuelve paginado, data.results
             const equiposList = data.results || data;

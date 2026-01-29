@@ -30,18 +30,28 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        // Si la respuesta no es OK, intentamos leerla como texto.
         const errorText = await response.text();
+        let errorMessage = 'Credenciales incorrectas. Por favor, inténtalo de nuevo.';
+
         try {
-          // Si el texto es un JSON válido (como un error de credenciales de Django REST Framework)
           const errorData = JSON.parse(errorText);
-          throw new Error(errorData.detail || 'Credenciales incorrectas. Por favor, inténtalo de nuevo.');
+          // Django REST Framework suele devolver errores en 'detail' o 'non_field_errors'
+          if (errorData.non_field_errors && Array.isArray(errorData.non_field_errors)) {
+            errorMessage = errorData.non_field_errors[0];
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+
+          // Traducción amigable de mensajes comunes del backend
+          if (errorMessage === 'Unable to log in with provided credentials.') {
+            errorMessage = 'El usuario o la contraseña son incorrectos. Por favor, verifica tus datos.';
+          }
         } catch (jsonError) {
-          // Si no es JSON, es probable que sea un error del servidor (como un 404 o 500)
-          console.error('La respuesta del servidor no es un JSON válido:', errorText);
-          // Mostramos un error más genérico pero informativo
-          throw new Error(`Error del servidor (${response.status}). Revisa que el backend esté funcionando y la URL sea correcta.`);
+          // Si no es JSON, mensaje genérico con el código de estado
+          errorMessage = `Error del servidor (${response.status}). Por favor, contacta a soporte.`;
         }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

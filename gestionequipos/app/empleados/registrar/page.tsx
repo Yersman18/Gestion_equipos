@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { Layout } from '@/components/Layout';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { useSede } from '@/app/context/SedeContext';
 
 export default function RegistrarEmpleadoPage() {
   const [nombre, setNombre] = useState('');
@@ -11,17 +12,29 @@ export default function RegistrarEmpleadoPage() {
   const [cedula, setCedula] = useState('');
   const [cargo, setCargo] = useState('');
   const [area, setArea] = useState('');
+  const [sedeId, setSedeId] = useState<number | ''>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { token, isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
+  const { sedeActiva, sedesPermitidas } = useSede();
 
   useEffect(() => {
     if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push('/login');
+      return;
     }
-  }, [isAuthenticated, isAuthLoading, router]);
+
+    // Si hay una sede activa real (id > 0), la pre-seleccionamos
+    if (sedeActiva && sedeActiva.id !== 0) {
+      setSedeId(sedeActiva.id);
+    } else if (sedesPermitidas.length > 0) {
+      // Si estamos en "Todas las Sedes", intentamos pre-seleccionar la primera real
+      const primeraReal = sedesPermitidas.find(s => s.id !== 0);
+      if (primeraReal) setSedeId(primeraReal.id);
+    }
+  }, [isAuthenticated, isAuthLoading, router, sedeActiva, sedesPermitidas]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,9 +51,10 @@ export default function RegistrarEmpleadoPage() {
         body: JSON.stringify({
           nombre,
           apellido,
-          cedula: cedula || null, // Allow null if empty
-          cargo: cargo || null,   // Allow null if empty
-          area: area || null,     // Allow null if empty
+          cedula: cedula || null,
+          cargo: cargo || null,
+          area: area || null,
+          sede: sedeId || null, // Enviamos la sede seleccionada
         }),
       });
 
@@ -50,7 +64,7 @@ export default function RegistrarEmpleadoPage() {
         throw new Error(errorMessage || 'Ocurrió un error al registrar el empleado.');
       }
 
-      router.push('/empleados'); // Redirect to employee list after successful registration
+      router.push('/empleados');
 
     } catch (err: any) {
       setError(err.message);
@@ -58,6 +72,8 @@ export default function RegistrarEmpleadoPage() {
       setIsLoading(false);
     }
   };
+
+  const isAdmin = user?.is_superuser || user?.rol === 'ADMIN';
 
   return (
     <Layout>
@@ -101,6 +117,26 @@ export default function RegistrarEmpleadoPage() {
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
             </div>
+
+            {/* Solo mostramos selector de sede si es admin o tiene múltiples sedes */}
+            {isAdmin && (
+              <div className="space-y-2">
+                <label htmlFor="sede" className="block text-sm font-bold text-gray-700">Sede <span className="text-red-500">*</span></label>
+                <select
+                  id="sede"
+                  value={sedeId}
+                  onChange={(e) => setSedeId(Number(e.target.value))}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white font-semibold"
+                >
+                  <option value="" disabled>Seleccione una sede</option>
+                  {sedesPermitidas.filter(s => s.id !== 0).map((s) => (
+                    <option key={s.id} value={s.id}>{s.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <label htmlFor="cedula" className="block text-sm font-bold text-gray-700">Cédula</label>
               <input
@@ -168,3 +204,4 @@ export default function RegistrarEmpleadoPage() {
     </Layout>
   );
 }
+

@@ -52,10 +52,11 @@ class EmpleadoListCreateAPIView(generics.ListCreateAPIView):
         queryset = Empleado.objects.all()
 
         if is_admin:
-            sede_id = self.request.query_params.get('sede')
-            if sede_id:
+            sede_id = self.request.query_params.get('sede') or self.request.query_params.get('sede_id')
+            if sede_id and sede_id != '0':
                 queryset = queryset.filter(sede_id=sede_id)
             return queryset
+
         
         if user_profile and hasattr(user_profile, 'sede') and user_profile.sede:
             return queryset.filter(sede=user_profile.sede)

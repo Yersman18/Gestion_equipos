@@ -28,7 +28,7 @@ const PerifericosPage = () => {
     const fetchPerifericos = async () => {
       setLoading(true);
       try {
-        const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : '';
+        const queryParams = (sedeActiva && sedeActiva.id !== 0) ? `?sede=${sedeActiva.id}` : '';
         const data = await fetchAuthenticated(`/api/perifericos/${queryParams}`);
         setPerifericos(data);
       } catch (err) {

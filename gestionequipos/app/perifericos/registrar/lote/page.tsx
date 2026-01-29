@@ -1,8 +1,10 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { fetchAuthenticated } from '@/app/utils/api';
+import { useAuth } from '@/app/context/AuthContext';
+import { useSede } from '@/app/context/SedeContext';
 
 const TIPO_PERIFERICO_CHOICES = [
     { value: 'Mouse', label: 'Mouse' },
@@ -21,13 +23,29 @@ const ESTADO_TECNICO_CHOICES = [
 
 const RegistrarPerifericosEnLotePage = () => {
     const router = useRouter();
+    const { user } = useAuth();
+    const { sedeActiva, sedesPermitidas } = useSede();
     const [cantidad, setCantidad] = useState(1);
     const [tipo, setTipo] = useState('Mouse');
     const [estadoTecnico, setEstadoTecnico] = useState('Funcional');
+    const [sedeId, setSedeId] = useState<number | ''>('');
     const [notas, setNotas] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    const isAdmin = useMemo(() => {
+        return user?.is_superuser || user?.rol === 'ADMIN';
+    }, [user]);
+
+    useEffect(() => {
+        if (sedeActiva && sedeActiva.id !== 0) {
+            setSedeId(sedeActiva.id);
+        } else if (sedesPermitidas.length > 0) {
+            const primeraReal = sedesPermitidas.find(s => s.id !== 0);
+            if (primeraReal) setSedeId(primeraReal.id);
+        }
+    }, [sedeActiva, sedesPermitidas]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -49,12 +67,14 @@ const RegistrarPerifericosEnLotePage = () => {
                 estado_tecnico: estadoTecnico,
                 notas,
                 estado_disponibilidad: 'Disponible',
+                sede: sedeId || null,
             };
             requests.push(fetchAuthenticated('/api/perifericos/', {
                 method: 'POST',
                 body: JSON.stringify(peripheralData),
             }));
         }
+
 
         try {
             await Promise.all(requests);
@@ -162,6 +182,27 @@ const RegistrarPerifericosEnLotePage = () => {
                                         ))}
                                     </select>
                                 </div>
+
+                                {/* Sede (Solo Admin) */}
+                                {isAdmin && (
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="sede" className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1 tracking-wider">
+                                            Sede de Asignación <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            id="sede"
+                                            value={sedeId}
+                                            onChange={(e) => setSedeId(Number(e.target.value))}
+                                            required
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer font-semibold text-gray-800"
+                                        >
+                                            <option value="" disabled>Seleccione una sede</option>
+                                            {sedesPermitidas.filter(s => s.id !== 0).map((s) => (
+                                                <option key={s.id} value={s.id}>{s.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 {/* Notas */}
                                 <div className="md:col-span-2">

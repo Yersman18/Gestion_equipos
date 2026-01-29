@@ -83,10 +83,16 @@ export default function RegistrarEquipoPage() {
       router.push('/login');
       return;
     }
-    if (sedeActiva) {
+    // Si hay una sede activa real (id > 0), la pre-seleccionamos
+    if (sedeActiva && sedeActiva.id !== 0) {
       setSedeId(sedeActiva.id);
+    } else if (sedesPermitidas.length > 0) {
+      // Si estamos en "Todas las Sedes", intentamos pre-seleccionar la primera real
+      const primeraReal = sedesPermitidas.find(s => s.id !== 0);
+      if (primeraReal) setSedeId(primeraReal.id);
     }
-  }, [router, isAuthenticated, isAuthLoading, sedeActiva]);
+  }, [router, isAuthenticated, isAuthLoading, sedeActiva, sedesPermitidas]);
+
 
 
   const handleSubmit = async (e: FormEvent) => {
@@ -122,7 +128,7 @@ export default function RegistrarEquipoPage() {
         const newEmpleado = await newEmpleadoRes.json();
         finalEmpleadoId = newEmpleado.id;
       }
-      
+
       const esAsignado = finalEmpleadoId && mostrandoAsignacion;
       const nuevaDisponibilidad = esAsignado ? 'Asignado' : 'Disponible';
 
@@ -220,80 +226,80 @@ export default function RegistrarEquipoPage() {
 
         <div className="p-8">
           <form className="space-y-8" onSubmit={handleSubmit}>
-            
+
             <div>
               <div className="flex items-center mb-5 pb-3 border-b-2 border-blue-200">
                 <span className="text-2xl mr-2"></span>
                 <h3 className="text-xl font-bold text-gray-800">Descripción del Equipo</h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label htmlFor="nombre" className="block text-sm font-bold text-gray-700">
-                     Nombre del Equipo <span className="text-red-500">*</span>
+                    Nombre del Equipo <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="marca" className="block text-sm font-bold text-gray-700">
-                     Marca <span className="text-red-500">*</span>
+                    Marca <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="modelo" className="block text-sm font-bold text-gray-700">
-                     Modelo <span className="text-red-500">*</span>
+                    Modelo <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="serial" className="block text-sm font-bold text-gray-700">
-                     Serial <span className="text-red-500">*</span>
+                    Serial <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" id="serial" value={serial} onChange={(e) => setSerial(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="serial" value={serial} onChange={(e) => setSerial(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="ram" className="block text-sm font-bold text-gray-700">
-                     RAM
+                    RAM
                   </label>
-                  <input type="text" id="ram" value={ram} onChange={(e) => setRam(e.target.value)} placeholder="Ej: 8GB" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="ram" value={ram} onChange={(e) => setRam(e.target.value)} placeholder="Ej: 8GB" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="rom" className="block text-sm font-bold text-gray-700">
-                     Almacenamiento (ROM)
+                    Almacenamiento (ROM)
                   </label>
-                  <input type="text" id="rom" value={rom} onChange={(e) => setRom(e.target.value)} placeholder="Ej: 256GB SSD" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="rom" value={rom} onChange={(e) => setRom(e.target.value)} placeholder="Ej: 256GB SSD" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="sistemaOperativo" className="block text-sm font-bold text-gray-700">
                     Sistema Operativo
                   </label>
-                  <input type="text" id="sistemaOperativo" value={sistemaOperativo} onChange={(e) => setSistemaOperativo(e.target.value)} placeholder="Ej: Windows 10 Pro" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="sistemaOperativo" value={sistemaOperativo} onChange={(e) => setSistemaOperativo(e.target.value)} placeholder="Ej: Windows 10 Pro" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="procesador" className="block text-sm font-bold text-gray-700">
-                     Procesador
+                    Procesador
                   </label>
-                  <input type="text" id="procesador" value={procesador} onChange={(e) => setProcesador(e.target.value)} placeholder="Ej: Intel Core i7-11800H" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="procesador" value={procesador} onChange={(e) => setProcesador(e.target.value)} placeholder="Ej: Intel Core i7-11800H" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="antivirus" className="block text-sm font-bold text-gray-700">
-                     Antivirus Instalado
+                    Antivirus Instalado
                   </label>
-                  <input type="text" id="antivirus" value={antivirus} onChange={(e) => setAntivirus(e.target.value)} placeholder="Ej: ESET Endpoint Security" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                  <input type="text" id="antivirus" value={antivirus} onChange={(e) => setAntivirus(e.target.value)} placeholder="Ej: ESET Endpoint Security" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="tipoEquipo" className="block text-sm font-bold text-gray-700">
-                     Tipo de Equipo
+                    Tipo de Equipo
                   </label>
                   <select id="tipoEquipo" value={tipoEquipo} onChange={(e) => setTipoEquipo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white">
                     <option value="Laptop">Laptop</option>
@@ -307,31 +313,37 @@ export default function RegistrarEquipoPage() {
 
                 <div className="space-y-2 md:col-span-2"> {/* Ocupa dos columnas si el grid tiene 3 */}
                   <label htmlFor="usuariosSistema" className="block text-sm font-bold text-gray-700">
-                     Usuarios del Sistema Operativo
+                    Usuarios del Sistema Operativo
                   </label>
                   <textarea id="usuariosSistema" value={usuariosSistema} onChange={(e) => setUsuariosSistema(e.target.value)} rows={2} placeholder="Lista de usuarios locales o de dominio, separados por coma o salto de línea." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"></textarea>
                 </div>
 
                 <div className="space-y-2 md:col-span-3"> {/* Ocupa tres columnas si el grid tiene 3 */}
                   <label htmlFor="redesConectadas" className="block text-sm font-bold text-gray-700">
-                     Redes Conectadas
+                    Redes Conectadas
                   </label>
                   <textarea id="redesConectadas" value={redesConectadas} onChange={(e) => setRedesConectadas(e.target.value)} rows={2} placeholder="Descripción de redes (WiFi, Ethernet, VPNs) y configuraciones relevantes." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"></textarea>
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="sede" className="block text-sm font-bold text-gray-700">
-                     Sede <span className="text-red-500">*</span>
+                    Sede <span className="text-red-500">*</span>
                   </label>
                   <select id="sede" value={sedeId} onChange={(e) => setSedeId(Number(e.target.value))} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white">
-                    {(sedesPermitidas.length === 0 || sedeId === '') && (<option value="" disabled>{sedesPermitidas.length === 0 ? 'No hay sedes disponibles' : 'Seleccione una sede'}</option>)}
-                    {sedesPermitidas.map((s: Sede) => (<option key={s.id} value={s.id}>{s.nombre}</option>))}
+                    {(sedesPermitidas.filter(s => s.id !== 0).length === 0 || sedeId === '') && (
+                      <option value="" disabled>
+                        {sedesPermitidas.filter(s => s.id !== 0).length === 0 ? 'No hay sedes disponibles' : 'Seleccione una sede'}
+                      </option>
+                    )}
+                    {sedesPermitidas.filter(s => s.id !== 0).map((s: Sede) => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="estadoTecnico" className="block text-sm font-bold text-gray-700">
-                     Estado Técnico
+                    Estado Técnico
                   </label>
                   <select id="estadoTecnico" value={estadoTecnico} onChange={(e) => setEstadoTecnico(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white">
                     {ESTADO_TECNICO_CHOICES.map(e => <option key={e} value={e}>{e}</option>)}
@@ -341,7 +353,7 @@ export default function RegistrarEquipoPage() {
 
               <div className="mt-6 space-y-2">
                 <label htmlFor="notas" className="block text-sm font-bold text-gray-700">
-                   Notas Internas (TI)
+                  Notas Internas (TI)
                 </label>
                 <textarea id="notas" value={notas} onChange={(e) => setNotas(e.target.value)} rows={3} placeholder="Información adicional del equipo..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"></textarea>
               </div>
@@ -370,7 +382,7 @@ export default function RegistrarEquipoPage() {
                     <span className="text-2xl mr-2"></span>
                     <h3 className="text-xl font-bold text-gray-800">A Cargo de</h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="relative md:col-span-2">
                       {/* <<< CAMBIO CLAVE: Componente EmpleadoSelector integrado >>> */}
@@ -378,25 +390,26 @@ export default function RegistrarEquipoPage() {
                         selectedEmpleadoId={empleadoAsignadoId}
                         onSelectEmpleado={setEmpleadoAsignadoId}
                         onEmpleadoChange={setSelectedEmpleado}
+                        sedeId={sedeId || undefined}
                       />
                       <div className="mt-2 text-right">
                         <button
-                            type="button"
-                            onClick={() => {
-                                setShowNewEmpleadoForm(!showNewEmpleadoForm);
-                                // Clear new employee form fields if canceling
-                                if (showNewEmpleadoForm) {
-                                    setNewEmpleadoNombre('');
-                                    setNewEmpleadoApellido('');
-                                    setNewEmpleadoCedula('');
-                                    setNewEmpleadoCargo('');
-                                    setNewEmpleadoArea('');
-                                    setNewEmpleadoCorreo('');
-                                }
-                            }}
-                            className="text-sm text-blue-600 hover:underline"
+                          type="button"
+                          onClick={() => {
+                            setShowNewEmpleadoForm(!showNewEmpleadoForm);
+                            // Clear new employee form fields if canceling
+                            if (showNewEmpleadoForm) {
+                              setNewEmpleadoNombre('');
+                              setNewEmpleadoApellido('');
+                              setNewEmpleadoCedula('');
+                              setNewEmpleadoCargo('');
+                              setNewEmpleadoArea('');
+                              setNewEmpleadoCorreo('');
+                            }
+                          }}
+                          className="text-sm text-blue-600 hover:underline"
                         >
-                            {showNewEmpleadoForm ? 'Cancelar registro de Empleado' : 'Registrar Nuevo Empleado'}
+                          {showNewEmpleadoForm ? 'Cancelar registro de Empleado' : 'Registrar Nuevo Empleado'}
                         </button>
                       </div>
                     </div>
@@ -405,33 +418,33 @@ export default function RegistrarEquipoPage() {
 
                 {showNewEmpleadoForm && (
                   <div className="p-4 border-2 border-dashed border-blue-300 rounded-lg">
-                     <h4 className="text-lg font-bold text-gray-800 mb-4">Registrar Nuevo Empleado</h4>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoNombre" className="block text-sm font-bold text-gray-700">Nombre <span className="text-red-500">*</span></label>
-                         <input type="text" id="newEmpleadoNombre" value={newEmpleadoNombre} onChange={e => setNewEmpleadoNombre(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoApellido" className="block text-sm font-bold text-gray-700">Apellido <span className="text-red-500">*</span></label>
-                         <input type="text" id="newEmpleadoApellido" value={newEmpleadoApellido} onChange={e => setNewEmpleadoApellido(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoCedula" className="block text-sm font-bold text-gray-700">Cédula</label>
-                         <input type="text" id="newEmpleadoCedula" value={newEmpleadoCedula} onChange={e => setNewEmpleadoCedula(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoCargo" className="block text-sm font-bold text-gray-700">Cargo</label>
-                         <input type="text" id="newEmpleadoCargo" value={newEmpleadoCargo} onChange={e => setNewEmpleadoCargo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoArea" className="block text-sm font-bold text-gray-700">Área</label>
-                         <input type="text" id="newEmpleadoArea" value={newEmpleadoArea} onChange={e => setNewEmpleadoArea(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                       <div className="space-y-2">
-                         <label htmlFor="newEmpleadoCorreo" className="block text-sm font-bold text-gray-700">Correo Electrónico</label>
-                         <input type="email" id="newEmpleadoCorreo" value={newEmpleadoCorreo} onChange={e => setNewEmpleadoCorreo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"/>
-                       </div>
-                     </div>
+                    <h4 className="text-lg font-bold text-gray-800 mb-4">Registrar Nuevo Empleado</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoNombre" className="block text-sm font-bold text-gray-700">Nombre <span className="text-red-500">*</span></label>
+                        <input type="text" id="newEmpleadoNombre" value={newEmpleadoNombre} onChange={e => setNewEmpleadoNombre(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoApellido" className="block text-sm font-bold text-gray-700">Apellido <span className="text-red-500">*</span></label>
+                        <input type="text" id="newEmpleadoApellido" value={newEmpleadoApellido} onChange={e => setNewEmpleadoApellido(e.target.value)} required className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoCedula" className="block text-sm font-bold text-gray-700">Cédula</label>
+                        <input type="text" id="newEmpleadoCedula" value={newEmpleadoCedula} onChange={e => setNewEmpleadoCedula(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoCargo" className="block text-sm font-bold text-gray-700">Cargo</label>
+                        <input type="text" id="newEmpleadoCargo" value={newEmpleadoCargo} onChange={e => setNewEmpleadoCargo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoArea" className="block text-sm font-bold text-gray-700">Área</label>
+                        <input type="text" id="newEmpleadoArea" value={newEmpleadoArea} onChange={e => setNewEmpleadoArea(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="newEmpleadoCorreo" className="block text-sm font-bold text-gray-700">Correo Electrónico</label>
+                        <input type="email" id="newEmpleadoCorreo" value={newEmpleadoCorreo} onChange={e => setNewEmpleadoCorreo(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg" />
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -440,21 +453,21 @@ export default function RegistrarEquipoPage() {
                     <span className="text-2xl mr-2"></span>
                     <h3 className="text-xl font-bold text-gray-800">Recibido a Satisfacción</h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label htmlFor="fechaRecibido" className="block text-sm font-bold text-gray-700">
-                           Fecha
+                          Fecha
                         </label>
-                        <input type="date" id="fechaRecibido" value={fechaRecibido} onChange={(e) => setFechaRecibido(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                        <input type="date" id="fechaRecibido" value={fechaRecibido} onChange={(e) => setFechaRecibido(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                       </div>
 
                       <div className="space-y-2">
                         <label htmlFor="horaRecibido" className="block text-sm font-bold text-gray-700">
-                           Hora
+                          Hora
                         </label>
-                        <input type="time" id="horaRecibido" value={horaRecibido} onChange={(e) => setHoraRecibido(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                        <input type="time" id="horaRecibido" value={horaRecibido} onChange={(e) => setHoraRecibido(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                       </div>
                     </div>
 
@@ -462,18 +475,18 @@ export default function RegistrarEquipoPage() {
                       <label htmlFor="responsableEntrega" className="block text-sm font-bold text-gray-700">
                         Responsable de la Entrega (TI)
                       </label>
-                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed"/>
+                      <input type="text" id="responsableEntrega" value={user?.username || ''} disabled className="w-full px-4 py-3 border-2 border-gray-200 bg-gray-100 rounded-lg cursor-not-allowed" />
                     </div>
 
                     <div className="space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
-                         Firma de quien recibe
+                        Firma de quien recibe
                       </label>
                       <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                        <SignatureCanvas ref={sigCanvasUsuario} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                        <SignatureCanvas ref={sigCanvasUsuario} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                       </div>
                       <button type="button" onClick={() => clearSignature(sigCanvasUsuario)} className="text-sm text-red-600 hover:text-red-700 font-semibold">
-                         Limpiar firma
+                        Limpiar firma
                       </button>
                     </div>
                   </div>
@@ -485,28 +498,28 @@ export default function RegistrarEquipoPage() {
                     <h3 className="text-xl font-bold text-gray-800">Datos de Jefe Inmediato</h3>
                     <span className="ml-2 text-sm text-gray-500">(Opcional)</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label htmlFor="nombreJefe" className="block text-sm font-bold text-gray-700">
-                         Nombre
+                        Nombre
                       </label>
-                      <input type="text" id="nombreJefe" value={nombreJefe} onChange={(e) => setNombreJefe(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                      <input type="text" id="nombreJefe" value={nombreJefe} onChange={(e) => setNombreJefe(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                     </div>
 
                     <div className="space-y-2">
                       <label htmlFor="cargoJefe" className="block text-sm font-bold text-gray-700">
-                         Cargo
+                        Cargo
                       </label>
-                      <input type="text" id="cargoJefe" value={cargoJefe} onChange={(e) => setCargoJefe(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"/>
+                      <input type="text" id="cargoJefe" value={cargoJefe} onChange={(e) => setCargoJefe(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all" />
                     </div>
 
                     <div className="md:col-span-2 space-y-2">
                       <label className="block text-sm font-bold text-gray-700">
-                         Firma del Jefe Inmediato
+                        Firma del Jefe Inmediato
                       </label>
                       <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                        <SignatureCanvas ref={sigCanvasJefe} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                        <SignatureCanvas ref={sigCanvasJefe} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                       </div>
                       <button type="button" onClick={() => clearSignature(sigCanvasJefe)} className="text-sm text-red-600 hover:text-red-700 font-semibold">
                         Limpiar firma
@@ -520,7 +533,7 @@ export default function RegistrarEquipoPage() {
                     <span className="text-2xl mr-2"></span>
                     <h3 className="text-xl font-bold text-gray-800">Compromiso</h3>
                   </div>
-                  
+
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-lg border-l-4 border-orange-400 mb-4">
                     <p className="text-sm text-gray-700 leading-relaxed">
                       Declaro haber recibido el equipo descrito y me comprometo a mantenerlo en buen estado. Notificaré de inmediato al área de TI cualquier falla para su atención. Autorizo el descuento del valor del equipo en caso de daños, pérdidas o uso indebido, y asumo la responsabilidad de aplicar las medidas necesarias para su cuidado y seguridad.
@@ -529,20 +542,20 @@ export default function RegistrarEquipoPage() {
 
                   <div className="space-y-2">
                     <label className="block text-sm font-bold text-gray-700">
-                       Firma de leído y entendido
+                      Firma de leído y entendido
                     </label>
                     <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                      <SignatureCanvas ref={sigCanvasCompromiso} canvasProps={{className: 'w-full h-24 border border-gray-200 rounded'}} />
+                      <SignatureCanvas ref={sigCanvasCompromiso} canvasProps={{ className: 'w-full h-24 border border-gray-200 rounded' }} />
                     </div>
                     <button type="button" onClick={() => clearSignature(sigCanvasCompromiso)} className="text-sm text-red-600 hover:text-red-700 font-semibold">
-                       Limpiar firma
+                      Limpiar firma
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label htmlFor="observacionesUsuario" className="block text-sm font-bold text-gray-700">
-                     Observaciones del Colaborador
+                    Observaciones del Colaborador
                     <span className="ml-2 text-sm text-gray-500 font-normal">(Opcional)</span>
                   </label>
                   <textarea id="observacionesUsuario" value={observacionesUsuario} onChange={(e) => setObservacionesUsuario(e.target.value)} rows={3} placeholder="Cualquier observación adicional..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"></textarea>

@@ -31,7 +31,8 @@ class Mantenimiento(models.Model):
     
     # Fechas
     fecha_inicio = models.DateField(default=date.today)
-    fecha_finalizacion = models.DateField(null=True, blank=True)
+    fecha_finalizacion = models.DateField(null=True, blank=True, help_text="Fecha límite estimada")
+    fecha_real_finalizacion = models.DateField(null=True, blank=True, help_text="Fecha en la que realmente se marcó como finalizado")
 
     # Descripción y resultados
     descripcion_problema = models.TextField(blank=True, help_text="Qué problema presentaba el equipo")
@@ -45,6 +46,24 @@ class Mantenimiento(models.Model):
     # Timestamps
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
+
+    @property
+    def fuera_de_fecha(self):
+        """
+        Determina si el mantenimiento se finalizó después de la fecha límite
+        o si ya está vencido pero sigue pendiente.
+        """
+        if self.estado_mantenimiento == 'Finalizado':
+            if self.fecha_real_finalizacion and self.fecha_finalizacion:
+                return self.fecha_real_finalizacion > self.fecha_finalizacion
+            return False
+        
+        # Si sigue pendiente y ya pasó la fecha límite
+        today = date.today()
+        if self.estado_mantenimiento in ['Pendiente', 'En proceso'] and self.fecha_finalizacion:
+            return today > self.fecha_finalizacion
+        
+        return False
 
     class Meta:
         constraints = [

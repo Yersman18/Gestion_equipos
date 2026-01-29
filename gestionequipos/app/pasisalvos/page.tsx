@@ -59,7 +59,7 @@ const PasisalvosPage = () => {
                     <div>
                         <div className="flex items-center mb-2">
                             <span className="text-4xl mr-3">📄</span>
-                            <h1 className="text-4xl font-black text-gray-800 tracking-tight">Paces y Salvos de TI</h1>
+                            <h1 className="text-4xl font-black text-gray-800 tracking-tight">Paz y Salvos de TI</h1>
                         </div>
                         <p className="text-gray-500 font-medium ml-14">Gestión de certificaciones de entrega de equipos tecnológicos.</p>
                     </div>

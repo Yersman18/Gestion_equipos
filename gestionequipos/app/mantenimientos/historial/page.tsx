@@ -15,8 +15,9 @@ interface Mantenimiento {
   estado_mantenimiento: string;
   fecha_inicio: string;
   fecha_finalizacion: string;
-  evidencia_url: string | null;
-  evidencia_filename: string | null;
+  fecha_real_finalizacion?: string;
+  fuera_de_fecha?: boolean;
+  evidencias: any[];
   evidencia_finalizacion_url: string | null;
   evidencia_finalizacion_filename: string | null;
 }
@@ -53,7 +54,7 @@ const HistorialMantenimientosPage: React.FC = () => {
       const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/api/mantenimientos/`);
       // Eliminamos el hardcode de 'Finalizado' para permitir filtrar por cualquier estado
 
-      if (sedeActiva) {
+      if (sedeActiva && sedeActiva.id !== 0) {
         url.searchParams.append('sede', String(sedeActiva.id));
       }
 
@@ -291,13 +292,18 @@ const HistorialMantenimientosPage: React.FC = () => {
 
               {/* Body */}
               <div className="p-5 space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap gap-2 items-center">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getTipoBadge(m.tipo_mantenimiento)}`}>
                     {m.tipo_mantenimiento}
                   </span>
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getEstadoBadge(m.estado_mantenimiento)}`}>
                     {m.estado_mantenimiento}
                   </span>
+                  {m.fuera_de_fecha && (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase border bg-red-100 text-red-700 border-red-200 animate-pulse">
+                      ⚠️ Fuera de Fecha
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -313,9 +319,17 @@ const HistorialMantenimientosPage: React.FC = () => {
                   </div>
                   {m.fecha_finalizacion && (
                     <div className="flex items-center text-sm text-gray-600">
-                      <span className="w-24 font-medium">Finalizado:</span>
-                      <span className="font-mono text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded">
+                      <span className="w-24 font-medium">Límite:</span>
+                      <span className="font-mono text-xs bg-gray-50 text-gray-700 px-2 py-1 rounded">
                         🏁 {new Date(m.fecha_finalizacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
+                      </span>
+                    </div>
+                  )}
+                  {m.fecha_real_finalizacion && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <span className="w-24 font-medium">Finalizado:</span>
+                      <span className={`font-mono text-xs px-2 py-1 rounded ${m.fuera_de_fecha ? 'bg-red-50 text-red-700 font-bold' : 'bg-emerald-50 text-emerald-700'}`}>
+                        ✅ {new Date(m.fecha_real_finalizacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                       </span>
                     </div>
                   )}

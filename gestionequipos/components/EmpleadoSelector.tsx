@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/context/AuthContext';
+import { useSede } from '@/app/context/SedeContext';
 
 import { fetchAuthenticated } from '@/app/utils/api';
 
@@ -12,33 +13,43 @@ interface Empleado {
   cargo?: string;
   area?: string;
   cedula?: string;
+  sede?: number;
 }
 
 interface EmpleadoSelectorProps {
   selectedEmpleadoId: number | '';
   onSelectEmpleado: (empleadoId: number | '') => void;
   onEmpleadoChange: (empleado: Empleado | null) => void;
+  sedeId?: number; // Sede opcional para filtrar
 }
 
-export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmpleadoChange }: EmpleadoSelectorProps) {
+export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmpleadoChange, sedeId }: EmpleadoSelectorProps) {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEmpleados, setFilteredEmpleados] = useState<Empleado[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { sedeActiva } = useSede();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Determinar la sede efectiva para filtrar
+  const effectiveSedeId = sedeId !== undefined ? sedeId : (sedeActiva?.id !== 0 ? sedeActiva?.id : undefined);
 
   useEffect(() => {
     if (isAuthLoading) return;
 
     if (!isAuthenticated) {
-      // Handle unauthenticated state
       return;
     }
 
     const fetchEmpleados = async () => {
       try {
-        const data: Empleado[] = await fetchAuthenticated('/api/empleados/');
+        // Si hay una sede específica, la inyectamos en la URL
+        const url = effectiveSedeId
+          ? `/api/empleados/?sede=${effectiveSedeId}`
+          : '/api/empleados/';
+
+        const data: Empleado[] = await fetchAuthenticated(url);
         setEmpleados(data);
       } catch (err) {
         console.error("Error fetching employees:", err);
@@ -46,7 +57,8 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
     };
 
     fetchEmpleados();
-  }, [isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading, effectiveSedeId]);
+
 
   useEffect(() => {
     if (searchTerm) {
@@ -108,7 +120,7 @@ export function EmpleadoSelector({ selectedEmpleadoId, onSelectEmpleado, onEmple
             setSearchTerm(e.target.value);
             setIsDropdownOpen(true);
             if (selectedEmpleadoId) {
-              onSelectEmpleado(''); 
+              onSelectEmpleado('');
               onEmpleadoChange(null);
             }
           }}

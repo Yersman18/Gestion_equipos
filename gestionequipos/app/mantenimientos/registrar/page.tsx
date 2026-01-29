@@ -1,7 +1,7 @@
 // gestionequipos/app/mantenimientos/registrar/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { useAuth } from '@/app/context/AuthContext';
@@ -26,7 +26,11 @@ interface Usuario {
 export default function RegistrarMantenimientoPage() {
   const router = useRouter();
   const { user, token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const { sedeActiva } = useSede();
+  const { sedeActiva, sedesPermitidas } = useSede();
+
+  const isAdmin = useMemo(() => {
+    return user?.is_superuser || user?.rol === 'ADMIN';
+  }, [user]);
 
   const [formData, setFormData] = useState({
     equipo: '',
@@ -36,8 +40,22 @@ export default function RegistrarMantenimientoPage() {
     tipo_mantenimiento: 'Preventivo',
     descripcion_problema: '',
     notas: '',
-    sede: sedeActiva?.id || '',
+    sede: '',
   });
+
+  // Al cargar, si tenemos sede activa (id > 0), la usamos. 
+  // Si no, si somos admin, usamos la primera real de la lista.
+  useEffect(() => {
+    if (sedeActiva && sedeActiva.id !== 0) {
+      setFormData(prev => ({ ...prev, sede: String(sedeActiva.id) }));
+    } else if (isAdmin && sedesPermitidas.length > 0) {
+      const primeraReal = sedesPermitidas.find(s => s.id !== 0);
+      if (primeraReal) {
+        setFormData(prev => ({ ...prev, sede: String(primeraReal.id) }));
+      }
+    }
+  }, [sedeActiva, sedesPermitidas, isAdmin]);
+
 
   const [evidencias, setEvidencias] = useState<File[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
@@ -54,26 +72,26 @@ export default function RegistrarMantenimientoPage() {
       return;
     }
 
-    if (!sedeActiva && !user?.is_superuser) {
-      setError('Por favor, selecciona una sede para registrar mantenimientos.');
-      setLoading(false);
-      return;
-    }
-
-    setFormData((prev) => ({ ...prev, sede: sedeActiva?.id || '' }));
-
     const fetchInitialData = async () => {
+      // No cargamos si no hay sede y no es admin con libertad de ver todo
+      if (!formData.sede && !isAdmin) return;
+
       try {
+        setLoading(true);
         const headers = { 'Authorization': `Token ${token}` };
 
-        const urlEquipos = `${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${user?.is_superuser || !sedeActiva ? '' : `?sede=${sedeActiva?.id}`}`;
+        // Cargamos equipos filtrados por la sede seleccionada en el formulario
+        // Si no hay sede seleccionada pero es admin, traemos todos (aunque lo normal es que ya haya una pre-seleccionada)
+        const sedeParaFiltrar = formData.sede || (sedeActiva?.id !== 0 ? sedeActiva?.id : '');
+        const urlEquipos = `${process.env.NEXT_PUBLIC_API_URL}/api/equipos/${sedeParaFiltrar ? `?sede=${sedeParaFiltrar}` : ''}`;
+
         const equiposRes = await fetch(urlEquipos, { headers });
         if (!equiposRes.ok) throw new Error('Error al cargar equipos.');
         const equiposData = await equiposRes.json();
         setEquipos(equiposData.results || equiposData);
 
-
-        // Fetch usuarios
+        // Usuarios (responsables) - estos suelen ser globales o por sede, 
+        // por ahora los mantenemos globales o podrías filtrarlos también si lo prefieres
         const usuariosRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/usuarios/`, { headers });
         if (!usuariosRes.ok) throw new Error('Error al cargar usuarios.');
         const usuariosData = await usuariosRes.json();
@@ -87,7 +105,7 @@ export default function RegistrarMantenimientoPage() {
     };
 
     fetchInitialData();
-  }, [isAuthenticated, isAuthLoading, router, token, sedeActiva, user]);
+  }, [isAuthenticated, isAuthLoading, router, token, formData.sede, isAdmin, sedeActiva]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -186,7 +204,7 @@ export default function RegistrarMantenimientoPage() {
         tipo_mantenimiento: 'Preventivo',
         descripcion_problema: '',
         notas: '',
-        sede: sedeActiva?.id || '',
+        sede: sedeActiva?.id ? String(sedeActiva.id) : '',
       });
       setEvidencias([]);
       const fileInput = document.getElementById('evidencias') as HTMLInputElement;
@@ -304,6 +322,28 @@ export default function RegistrarMantenimientoPage() {
                     ))}
                   </select>
                 </div>
+
+                {/* Sede (Solo Admin) */}
+                {isAdmin && (
+                  <div className="md:col-span-2 space-y-2">
+                    <label htmlFor="sede" className="block text-sm font-bold text-gray-700">
+                      🏢 Sede del Mantenimiento <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="sede"
+                      name="sede"
+                      value={formData.sede}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all bg-white font-semibold"
+                      required
+                    >
+                      <option value="" disabled>Seleccione una sede</option>
+                      {sedesPermitidas.filter(s => s.id !== 0).map((s) => (
+                        <option key={s.id} value={s.id}>{s.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 

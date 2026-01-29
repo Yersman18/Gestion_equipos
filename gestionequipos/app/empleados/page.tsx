@@ -63,7 +63,7 @@ export default function EmpleadosPage() {
     const fetchEmpleados = async () => {
       try {
         setIsLoading(true);
-        const queryParams = sedeActiva ? `?sede=${sedeActiva.id}` : '';
+        const queryParams = (sedeActiva && sedeActiva.id !== 0) ? `?sede=${sedeActiva.id}` : '';
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/empleados/${queryParams}`, {
           headers: {
             'Authorization': `Token ${token}`,

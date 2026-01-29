@@ -91,6 +91,9 @@ class MantenimientoSerializer(serializers.ModelSerializer):
     evidencia_finalizacion_url = serializers.SerializerMethodField()
     evidencia_finalizacion_filename = serializers.SerializerMethodField()
     
+    # Campo calculado para saber si se entregó tarde
+    fuera_de_fecha = serializers.ReadOnlyField()
+
     def get_evidencia_finalizacion_url(self, obj):
         if obj.evidencia_finalizacion:
             request = self.context.get('request') if self.context else None
@@ -110,13 +113,13 @@ class MantenimientoSerializer(serializers.ModelSerializer):
             'id', 'equipo', 'equipo_nombre', 'equipo_tipo', 'equipo_asociado_nombre', 'sede', 'sede_nombre',
             'responsable', 'responsable_nombre', 'usuario_responsable_username',
             'tipo_mantenimiento', 'estado_mantenimiento',
-            'fecha_inicio', 'fecha_finalizacion',
+            'fecha_inicio', 'fecha_finalizacion', 'fecha_real_finalizacion', 'fuera_de_fecha',
             'descripcion_problema', 'acciones_realizadas', 'repuestos_utilizados',
             'notas', 'creado_en', 'actualizado_en',
             'evidencias', 'evidencias_uploads',
             'evidencia_finalizacion', 'evidencia_finalizacion_url', 'evidencia_finalizacion_filename'
         ]
-        read_only_fields = ('creado_en', 'actualizado_en', 'fecha_inicio')
+        read_only_fields = ('creado_en', 'actualizado_en', 'fecha_inicio', 'fecha_real_finalizacion')
 
     def to_internal_value(self, data):
         """

@@ -18,6 +18,7 @@ interface DashboardStats {
   total_mantenimientos: number;
   mantenimientos_activos: number;
   mantenimientos_vencidos: number;
+  mantenimientos_finalizados_tarde: number;
   total_perifericos: number;
   total_licencias: number;
   licencias_vencidas: number;
@@ -174,7 +175,18 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <h3 className="text-red-900 font-bold">Mantenimientos Vencidos</h3>
-                    <p className="text-red-600 text-xs font-semibold">Se requiere atención inmediata</p>
+                    <p className="text-red-600 text-xs font-semibold">Atención inmediata requerida</p>
+                  </div>
+                </div>
+              )}
+              {(stats?.mantenimientos_finalizados_tarde || 0) > 0 && (
+                <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
+                  <div className="bg-rose-400 text-white p-3 rounded-xl font-black text-2xl">
+                    {stats?.mantenimientos_finalizados_tarde}
+                  </div>
+                  <div>
+                    <h3 className="text-rose-900 font-bold">Entregas con Retraso</h3>
+                    <p className="text-rose-600 text-xs font-semibold">Finalizados fuera de fecha</p>
                   </div>
                 </div>
               )}

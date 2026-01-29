@@ -59,7 +59,7 @@ export default function EquiposPage() {
       setError(null);
 
       const params = new URLSearchParams();
-      if (sedeActiva) {
+      if (sedeActiva && sedeActiva.id !== 0) {
         params.append('sede', String(sedeActiva.id));
       } else if (!user?.is_superuser) {
         // Si no es superuser y no hay sede seleccionada (y no está cargando), no mostramos nada
@@ -255,10 +255,10 @@ export default function EquiposPage() {
                   <span className="text-xs text-gray-500 font-bold uppercase tracking-tighter">Salud Técnica:</span>
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${equipo.diagnostico_salud?.color === 'green' ? 'bg-emerald-500' :
-                        equipo.diagnostico_salud?.color === 'yellow' ? 'bg-amber-500' : 'bg-red-500'
+                      equipo.diagnostico_salud?.color === 'yellow' ? 'bg-amber-500' : 'bg-red-500'
                       }`}></span>
                     <span className={`text-[10px] font-black uppercase ${equipo.diagnostico_salud?.color === 'green' ? 'text-emerald-700' :
-                        equipo.diagnostico_salud?.color === 'yellow' ? 'text-amber-700' : 'text-red-700'
+                      equipo.diagnostico_salud?.color === 'yellow' ? 'text-amber-700' : 'text-red-700'
                       }`}>
                       {equipo.diagnostico_salud?.rango}
                     </span>
