@@ -4,14 +4,20 @@ import { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { useRouter } from 'next/navigation';
 import { useSede } from '@/app/context/SedeContext';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
+} from 'recharts';
+import {
+  Monitor, Settings, AlertTriangle, CheckCircle, Package, Users, Shield, Clock, TrendingUp, Laptop, MousePointer2, FileText
+} from 'lucide-react';
 
-// Interface para un item de estadística individual (e.g., por estado)
+// Interface para un item de estadística individual
 interface StatItem {
   [key: string]: string | number;
   count: number;
 }
 
-// Interface para el objeto completo de estadísticas del dashboard
+// Interface para el objeto completo de estadísticas
 interface DashboardStats {
   total_equipos: number;
   equipos_dados_de_baja: number;
@@ -27,46 +33,27 @@ interface DashboardStats {
   proximos_mantenimientos: number;
   equipos_por_estado: StatItem[];
   equipos_por_disponibilidad: StatItem[];
+  equipos_por_tipo: StatItem[];
   mantenimientos_por_estado: StatItem[];
+  mantenimientos_por_tipo: StatItem[];
+  perifericos_por_tipo: StatItem[];
+  licencias_por_estado: StatItem[];
 }
 
-// Componente para una tarjeta de estadística
-const StatCard = ({ title, value, description, colorClass, large = false }: { title: string, value: number | string, description: string, colorClass: string, large?: boolean }) => {
-  if (large) {
-    return (
-      <div className={`group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 h-full`}>
-        <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${colorClass}`}></div>
-        <div className="p-8 flex flex-col justify-between h-full">
-          <div>
-            <p className="text-gray-500 text-sm font-medium mb-4">{title}</p>
-            <h3 className="text-gray-800 font-semibold text-xl mb-2">{description}</h3>
-          </div>
-          <div>
-            <div className="text-7xl font-bold text-gray-800 mb-4">
-              {value}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899', '#06b6d4'];
 
-  return (
-    <div className={`group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100`}>
-      <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${colorClass}`}></div>
-      <div className="p-6">
-        <p className="text-gray-500 text-sm font-medium mb-2">{title}</p>
-        <h3 className="text-gray-600 text-sm leading-relaxed mb-4">{description}</h3>
-        <div className="text-5xl font-bold text-gray-800">
-          {value}
-        </div>
+const CustomCard = ({ children, title, icon: Icon, className = "" }: { children: React.ReactNode, title: string, icon: any, className?: string }) => (
+  <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-6 ${className}`}>
+    <div className="flex items-center gap-3 mb-6">
+      <div className="p-2 bg-slate-50 rounded-xl text-slate-600">
+        <Icon size={20} />
       </div>
+      <h3 className="font-bold text-gray-800 tracking-tight">{title}</h3>
     </div>
-  );
-};
+    {children}
+  </div>
+);
 
-
-// Componente principal del Dashboard
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,18 +71,13 @@ export default function DashboardPage() {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
+        const queryParams = sedeActiva && sedeActiva.id !== 0 ? `?sede_id=${sedeActiva.id}` : '';
         const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/stats/${queryParams}`;
         const response = await fetch(apiUrl, {
-          headers: {
-            'Authorization': `Token ${token}`,
-          },
+          headers: { 'Authorization': `Token ${token}` },
         });
 
-        if (!response.ok) {
-          throw new Error(`Error del servidor (${response.status})`);
-        }
-
+        if (!response.ok) throw new Error(`Error del servidor (${response.status})`);
         const data: DashboardStats = await response.json();
         setStats(data);
       } catch (err: any) {
@@ -108,14 +90,13 @@ export default function DashboardPage() {
     fetchStats();
   }, [router, sedeActiva]);
 
-  // --- Renderizado condicional ---
   if (isLoading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200 border-t-slate-900 mx-auto mb-4"></div>
-            <p className="text-gray-500 font-medium text-lg">Cargando Dashboard...</p>
+        <div className="flex items-center justify-center h-[80vh]">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-12 w-12 bg-blue-500 rounded-full animate-bounce mb-4"></div>
+            <p className="text-gray-400 font-bold">Analizando inventario...</p>
           </div>
         </div>
       </Layout>
@@ -125,198 +106,254 @@ export default function DashboardPage() {
   if (error) {
     return (
       <Layout>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-          <p className="text-red-800 font-medium">Error al cargar el dashboard: {error}</p>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-6 text-red-800 font-bold shadow-sm">
+            Hubo un error al cargar las estadísticas. Por favor intenta de nuevo.
+            <div className="text-sm font-normal mt-2">{error}</div>
+          </div>
         </div>
       </Layout>
     );
   }
 
-  // --- Extracción y cálculo de datos del estado `stats` ---
-  const equiposEnOperacion = stats?.equipos_por_disponibilidad?.find(
-    (item) => item.estado_disponibilidad === 'Asignado'
-  )?.count || 0;
+  // Preparar datos para gráficos con protección contra nulos/indefinidos
+  const chartDataDisponibilidad = stats?.equipos_por_disponibilidad?.map(item => ({
+    name: item.estado_disponibilidad,
+    value: item.count
+  })) || [];
 
-  const equiposDisponibles = stats?.equipos_por_disponibilidad?.find(
-    (item) => item.estado_disponibilidad === 'Disponible'
-  )?.count || 0;
+  const chartDataTipoEquipo = stats?.equipos_por_tipo?.map(item => ({
+    name: item.tipo_equipo || 'Otros',
+    value: item.count
+  })) || [];
 
-  const equiposEnReparacion = stats?.equipos_por_estado?.find(
-    (item) => item.estado_tecnico === 'En reparación'
-  )?.count || 0;
+  const chartDataMantenimiento = stats?.mantenimientos_por_estado?.map(item => ({
+    name: item.estado_mantenimiento,
+    total: item.count
+  })) || [];
+
+  const chartDataPerifericos = stats?.perifericos_por_tipo?.map(item => ({
+    name: item.tipo || 'Otros',
+    value: item.count
+  })) || [];
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl relative z-50">
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.1em] mb-1">{label || payload[0].name}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-white text-xl font-black">
+              {payload[0].value || payload[0].payload.total}
+            </span>
+            <span className="text-slate-400 text-xs font-bold">unidades</span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center mb-2">
-            <span className="text-4xl mr-3">📊</span>
-            <h1 className="text-4xl font-black text-gray-800 tracking-tight">
-              Panel de Control
-            </h1>
-          </div>
-          <p className="text-gray-500 font-medium ml-14">
-            Resumen en tiempo real del inventario tecnológico y estado de los mantenimientos.
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
-        {/* Sección de Alertas Críticas */}
-        {(stats?.mantenimientos_vencidos || 0) > 0 || (stats?.licencias_vencidas || 0) > 0 || (stats?.licencias_por_vencer || 0) > 0 ? (
-          <div className="mb-10 animate-pulse-subtle">
-            <h2 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
-              <span className="animate-bounce">⚠️</span> Alertas Críticas de Seguridad y TI
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(stats?.mantenimientos_vencidos || 0) > 0 && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
-                  <div className="bg-red-500 text-white p-3 rounded-xl font-black text-2xl">
-                    {stats?.mantenimientos_vencidos}
-                  </div>
-                  <div>
-                    <h3 className="text-red-900 font-bold">Mantenimientos Vencidos</h3>
-                    <p className="text-red-600 text-xs font-semibold">Atención inmediata requerida</p>
-                  </div>
+        {/* Banner de Bienvenida y Resumen Rápido */}
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">Panel de Control</h1>
+            <p className="text-gray-500 flex items-center gap-2 font-medium">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+              Estado operativo de {sedeActiva?.id === 0 ? 'todas las sedes' : `Sede ${sedeActiva?.nombre}`}
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 flex items-center gap-4 px-6 shadow-sm">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                <Monitor size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase">Equipos</p>
+                <p className="text-2xl font-black text-gray-800">{stats?.total_equipos || 0}</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-3xl border border-gray-100 flex items-center gap-4 px-6 shadow-sm">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                <Users size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase">Usuarios</p>
+                <p className="text-2xl font-black text-gray-800">{stats?.total_usuarios || 0}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Sección de Alertas */}
+        {(stats?.mantenimientos_vencidos || 0) > 0 || (stats?.licencias_vencidas || 0) > 0 || (stats?.licencias_por_vencer || 0) > 0 || (stats?.mantenimientos_finalizados_tarde || 0) > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {(stats?.mantenimientos_vencidos || 0) > 0 && (
+              <div className="bg-red-50 border border-red-100 p-5 rounded-3xl flex items-center gap-4">
+                <div className="p-3 bg-red-500 text-white rounded-2xl shadow-lg shadow-red-200">
+                  <AlertTriangle size={20} />
                 </div>
-              )}
-              {(stats?.mantenimientos_finalizados_tarde || 0) > 0 && (
-                <div className="bg-rose-50 border-2 border-rose-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
-                  <div className="bg-rose-400 text-white p-3 rounded-xl font-black text-2xl">
-                    {stats?.mantenimientos_finalizados_tarde}
-                  </div>
-                  <div>
-                    <h3 className="text-rose-900 font-bold">Entregas con Retraso</h3>
-                    <p className="text-rose-600 text-xs font-semibold">Finalizados fuera de fecha</p>
-                  </div>
+                <div>
+                  <h4 className="font-bold text-red-900 text-sm">Mantenimientos Vencidos</h4>
+                  <p className="text-2xl font-black text-red-600 leading-none">{stats?.mantenimientos_vencidos}</p>
                 </div>
-              )}
-              {(stats?.licencias_vencidas || 0) > 0 && (
-                <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
-                  <div className="bg-orange-500 text-white p-3 rounded-xl font-black text-2xl">
-                    {stats?.licencias_vencidas}
-                  </div>
-                  <div>
-                    <h3 className="text-orange-900 font-bold">Licencias Vencidas</h3>
-                    <p className="text-orange-600 text-xs font-semibold">Softwares sin soporte legal</p>
-                  </div>
+              </div>
+            )}
+            {(stats?.licencias_vencidas || 0) > 0 && (
+              <div className="bg-amber-50 border border-amber-100 p-5 rounded-3xl flex items-center gap-4">
+                <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-200">
+                  <Shield size={20} />
                 </div>
-              )}
-              {(stats?.licencias_por_vencer || 0) > 0 && (
-                <div className="bg-amber-50 border-2 border-amber-100 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
-                  <div className="bg-amber-500 text-white p-3 rounded-xl font-black text-2xl">
-                    {stats?.licencias_por_vencer}
-                  </div>
-                  <div>
-                    <h3 className="text-amber-900 font-bold">Próximos Vencimientos</h3>
-                    <p className="text-amber-600 text-xs font-semibold">Licencias expiran pronto (30 días)</p>
-                  </div>
+                <div>
+                  <h4 className="font-bold text-amber-900 text-sm">Licencias Vencidas</h4>
+                  <p className="text-2xl font-black text-amber-600 leading-none">{stats?.licencias_vencidas}</p>
                 </div>
-              )}
+              </div>
+            )}
+            {(stats?.mantenimientos_finalizados_tarde || 0) > 0 && (
+              <div className="bg-rose-50 border border-rose-100 p-5 rounded-3xl flex items-center gap-4">
+                <div className="p-3 bg-rose-400 text-white rounded-2xl shadow-lg shadow-rose-200">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-rose-900 text-sm">Entregas Tarde</h4>
+                  <p className="text-2xl font-black text-rose-500 leading-none">{stats?.mantenimientos_finalizados_tarde}</p>
+                </div>
+              </div>
+            )}
+            <div className="bg-blue-50 border border-blue-100 p-5 rounded-3xl flex items-center gap-4">
+              <div className="p-3 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-200">
+                <TrendingUp size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-blue-900 text-sm">Próximos Manten.</h4>
+                <p className="text-2xl font-black text-blue-600 leading-none">{stats?.proximos_mantenimientos || 0}</p>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="mb-10 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
-            <span className="text-emerald-500">✅</span>
-            <p className="text-emerald-700 text-sm font-semibold italic">Todo está al día. No se detectaron alarmas críticas.</p>
+          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl flex items-center gap-3 px-6">
+            <CheckCircle className="text-emerald-500" size={20} />
+            <p className="text-emerald-700 font-bold text-sm italic">Todo está operando bajo parámetros normales.</p>
           </div>
         )}
 
-        {/* Sección de Estadísticas Principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <StatCard
-            title="En Operación"
-            value={equiposEnOperacion}
-            description="Equipos asignados actualmente"
-            colorClass="from-blue-500 to-blue-600"
-          />
-          <StatCard
-            title="Disponibles"
-            value={equiposDisponibles}
-            description="Listos para ser asignados"
-            colorClass="from-emerald-500 to-emerald-600"
-          />
-          <StatCard
-            title="Dados de Baja"
-            value={stats?.equipos_dados_de_baja || 0}
-            description="Equipos retirados o inactivos"
-            colorClass="from-slate-400 to-slate-500"
-          />
-        </div>
+        {/* Gráficos Principales */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Disponibilidad y Tipo de Equipo */}
+          <div className="space-y-8">
+            <CustomCard title="Disponibilidad de Activos" icon={CheckCircle} className="h-[350px]">
+              <ResponsiveContainer width="100%" height="85%">
+                <PieChart>
+                  <Pie
+                    data={chartDataDisponibilidad}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={8}
+                    dataKey="value"
+                  >
+                    {chartDataDisponibilidad.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CustomCard>
 
-        {/* Sección de Mantenimientos */}
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión de Mantenimientos</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          <StatCard
-            title="Mantenimientos Activos"
-            value={stats?.mantenimientos_activos || 0}
-            description="Pendientes o En Proceso"
-            colorClass="from-yellow-500 to-yellow-600"
-          />
-          <StatCard
-            title="Próximos Mantenimientos"
-            value={stats?.proximos_mantenimientos || 0}
-            description="En los siguientes 30 días"
-            colorClass="from-sky-500 to-sky-600"
-          />
-          <StatCard
-            title="En Reparación"
-            value={equiposEnReparacion}
-            description="Equipos en taller"
-            colorClass="from-orange-500 to-orange-600"
-          />
-        </div>
-
-        {/* Sección de Resumen General y Desgloses */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* Columna de Resumen General */}
-          <div className="lg:col-span-1 space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800">Resumen General</h2>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_equipos || 0}</div>
-              <div className="text-sm text-gray-500 font-medium">Total Equipos Activos</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_perifericos || 0}</div>
-              <div className="text-sm text-gray-500 font-medium">Total Periféricos</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_licencias || 0}</div>
-              <div className="text-sm text-gray-500 font-medium">Total Licencias</div>
-            </div>
-            <div className="p-6 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <div className="text-4xl font-bold text-slate-700 mb-2">{stats?.total_usuarios || 0}</div>
-              <div className="text-sm text-gray-500 font-medium">Total Usuarios</div>
-            </div>
+            <CustomCard title="Equipos por Categoría" icon={Laptop} className="h-[350px]">
+              <ResponsiveContainer width="100%" height="85%">
+                <PieChart>
+                  <Pie
+                    data={chartDataTipoEquipo}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={8}
+                    dataKey="value"
+                  >
+                    {chartDataTipoEquipo.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[(index + 3) % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CustomCard>
           </div>
 
-          {/* Columna de Desgloses */}
-          <div className="lg:col-span-2 space-y-8">
-            <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-800 font-semibold text-lg mb-4">Mantenimientos por Estado</h3>
-              <ul className="space-y-3">
-                {stats?.mantenimientos_por_estado?.map(item => (
-                  <li key={`mantenimiento-${item.estado_mantenimiento}`} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">{item.estado_mantenimiento}</span>
-                    <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Mantenimientos y Periféricos */}
+          <div className="space-y-8">
+            <CustomCard title="Estado de Mantenimientos" icon={Settings} className="h-[350px]">
+              <ResponsiveContainer width="100%" height="85%">
+                <BarChart data={chartDataMantenimiento}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9', opacity: 0.4 }} />
+                  <Bar dataKey="total" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CustomCard>
 
-            <div className="p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-800 font-semibold text-lg mb-4">Equipos por Estado Técnico</h3>
-              <ul className="space-y-3">
-                {stats?.equipos_por_estado?.map(item => (
-                  <li key={`equipo-${item.estado_tecnico}`} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">{item.estado_tecnico}</span>
-                    <span className="font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded">{item.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <CustomCard title="Tipos de Periféricos" icon={MousePointer2} className="h-[350px]">
+              <ResponsiveContainer width="100%" height="85%">
+                <BarChart data={chartDataPerifericos} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={100} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" fill="#10b981" radius={[0, 6, 6, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CustomCard>
           </div>
+        </div>
 
+        {/* Desglose Detallado de Licencias y Mantenimientos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <CustomCard title="Estado de Licencias" icon={Shield}>
+            <div className="space-y-4">
+              {stats?.licencias_por_estado?.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="font-semibold text-gray-700">{item.estado}</span>
+                  </div>
+                  <span className="font-black text-gray-900">{item.count}</span>
+                </div>
+              ))}
+              {(!stats?.licencias_por_estado || stats.licencias_por_estado.length === 0) && (
+                <p className="text-gray-400 text-center py-4 italic">No hay datos de licencias</p>
+              )}
+            </div>
+          </CustomCard>
+
+          <CustomCard title="Tipos de Tareas Realizadas" icon={FileText}>
+            <div className="space-y-4">
+              {stats?.mantenimientos_por_tipo?.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="font-semibold text-gray-700">{item.tipo_mantenimiento}</span>
+                  </div>
+                  <span className="font-black text-gray-900">{item.count}</span>
+                </div>
+              ))}
+              {(!stats?.mantenimientos_por_tipo || stats.mantenimientos_por_tipo.length === 0) && (
+                <p className="text-gray-400 text-center py-4 italic">No hay datos de tareas</p>
+              )}
+            </div>
+          </CustomCard>
         </div>
 
       </div>

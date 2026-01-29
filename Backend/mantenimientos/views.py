@@ -1,8 +1,8 @@
-from rest_framework import viewsets, status
+from .models import Mantenimiento, EvidenciaMantenimiento, HistorialAccionMantenimiento
+from .serializers import MantenimientoSerializer, HistorialAccionMantenimientoSerializer
+from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Mantenimiento, EvidenciaMantenimiento
-from .serializers import MantenimientoSerializer
 from django.db.models import Q
 from datetime import date
 from django.utils import timezone
@@ -35,7 +35,7 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
         if is_admin:
             sede_id = self.request.query_params.get('sede_id') or self.request.query_params.get('sede')
-            if sede_id:
+            if sede_id and sede_id != '0':
                 queryset = queryset.filter(sede_id=sede_id)
             return queryset.order_by('-fecha_inicio')
 
@@ -115,6 +115,16 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         
         instance.estado_mantenimiento = 'En proceso'
         instance.save(update_fields=['estado_mantenimiento'])
+        
+        # Registrar en el historial
+        from .models import HistorialAccionMantenimiento
+        HistorialAccionMantenimiento.objects.create(
+            mantenimiento=instance,
+            usuario=request.user,
+            accion="Inició proceso",
+            detalle=f"El técnico {request.user.username} cambió el estado a 'En proceso'."
+        )
+        
         serializer = self.get_serializer(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -152,6 +162,15 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         instance.evidencia_finalizacion = evidencia_file
         instance.save()
 
+        # Registrar en el historial
+        from .models import HistorialAccionMantenimiento
+        HistorialAccionMantenimiento.objects.create(
+            mantenimiento=instance,
+            usuario=request.user,
+            accion="Finalizó mantenimiento",
+            detalle=f"El técnico {request.user.username} marcó el mantenimiento como finalizado."
+        )
+
         serializer = self.get_serializer(instance, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -169,6 +188,16 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 
         instance.estado_mantenimiento = 'Cancelado'
         instance.save(update_fields=['estado_mantenimiento'])
+        
+        # Registrar en el historial
+        from .models import HistorialAccionMantenimiento
+        HistorialAccionMantenimiento.objects.create(
+            mantenimiento=instance,
+            usuario=request.user,
+            accion="Canceló mantenimiento",
+            detalle=f"Acción realizada por {request.user.username}."
+        )
+        
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -193,3 +222,33 @@ class EvidenciaMantenimientoViewSet(viewsets.ViewSet):
             return Response({'error': 'La evidencia no fue encontrada.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class HistorialAccionMantenimientoListAPIView(generics.ListAPIView):
+    serializer_class = HistorialAccionMantenimientoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = HistorialAccionMantenimiento.objects.select_related('mantenimiento', 'mantenimiento__equipo', 'usuario')
+        
+        is_admin = False
+        user_profile = None
+        try:
+            user_profile = user.profile
+            if user.is_staff or user.is_superuser or (hasattr(user_profile, 'rol') and user_profile.rol == 'ADMIN'):
+                is_admin = True
+        except UserProfile.DoesNotExist:
+            if user.is_staff or user.is_superuser:
+                is_admin = True
+
+        if is_admin:
+            sede_id = self.request.query_params.get('sede_id') or self.request.query_params.get('sede')
+            if sede_id and sede_id != '0':
+                queryset = queryset.filter(mantenimiento__sede_id=sede_id)
+            return queryset.order_by('-fecha')
+
+        user_sede = getattr(user_profile, 'sede', None)
+        if user_sede:
+            return queryset.filter(mantenimiento__sede=user_sede).order_by('-fecha')
+        
+        return queryset.filter(usuario=user).order_by('-fecha')

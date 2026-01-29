@@ -86,3 +86,20 @@ class EvidenciaMantenimiento(models.Model):
 
     def __str__(self):
         return f"Evidencia para {self.mantenimiento.id}"
+class HistorialAccionMantenimiento(models.Model):
+    """
+    Modelo para registrar cada acción realizada sobre un mantenimiento.
+    """
+    mantenimiento = models.ForeignKey(Mantenimiento, on_delete=models.CASCADE, related_name='acciones_historial')
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    accion = models.CharField(max_length=100) # Ej: "Inició proceso", "Finalizó mantenimiento"
+    detalle = models.TextField(blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = "Historial de Acción de Mantenimiento"
+        verbose_name_plural = "Historiales de Acciones de Mantenimiento"
+
+    def __str__(self):
+        return f"{self.accion} - {self.mantenimiento.equipo.nombre} ({self.fecha})"

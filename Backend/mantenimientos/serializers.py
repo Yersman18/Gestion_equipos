@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Mantenimiento, EvidenciaMantenimiento
+from .models import Mantenimiento, EvidenciaMantenimiento, HistorialAccionMantenimiento
 from inventory.models import Equipo
 from django.contrib.auth.models import User
 from sede.models import Sede
@@ -284,3 +284,12 @@ class MantenimientoSerializer(serializers.ModelSerializer):
                     'id': instance.id,
                     'error': f'Error al serializar mantenimiento: {str(e)}'
                 }
+class HistorialAccionMantenimientoSerializer(serializers.ModelSerializer):
+    usuario_username = serializers.CharField(source='usuario.username', read_only=True)
+    equipo_nombre = serializers.CharField(source='mantenimiento.equipo.nombre', read_only=True)
+    mantenimiento_id = serializers.IntegerField(source='mantenimiento.id', read_only=True)
+    sede_id = serializers.IntegerField(source='mantenimiento.sede.id', read_only=True)
+
+    class Meta:
+        model = HistorialAccionMantenimiento
+        fields = ['id', 'mantenimiento_id', 'usuario', 'usuario_username', 'accion', 'detalle', 'fecha', 'equipo_nombre', 'sede_id']

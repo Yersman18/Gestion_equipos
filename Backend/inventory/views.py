@@ -535,7 +535,13 @@ class DashboardStatsView(APIView):
         # Estadísticas basadas en los QuerySets filtrados
         equipos_por_estado = equipos_activos_qs.values('estado_tecnico').annotate(count=Count('estado_tecnico'))
         equipos_por_disponibilidad = equipos_activos_qs.values('estado_disponibilidad').annotate(count=Count('estado_disponibilidad'))
+        equipos_por_tipo = equipos_activos_qs.values('tipo_equipo').annotate(count=Count('tipo_equipo'))
+        
         mantenimientos_por_estado = mantenimientos_qs.values('estado_mantenimiento').annotate(count=Count('estado_mantenimiento'))
+        mantenimientos_por_tipo = mantenimientos_qs.values('tipo_mantenimiento').annotate(count=Count('tipo_mantenimiento'))
+        
+        perifericos_por_tipo = perifericos_qs.values('tipo').annotate(count=Count('tipo'))
+        licencias_por_estado = licencias_qs.values('estado').annotate(count=Count('estado'))
         
         # Conteo de mantenimientos "activos" (Pendientes o En proceso)
         mantenimientos_activos = mantenimientos_qs.filter(
@@ -591,7 +597,11 @@ class DashboardStatsView(APIView):
             'licencias_por_vencer': licencias_por_vencer,
             'equipos_por_estado': list(equipos_por_estado),
             'equipos_por_disponibilidad': list(equipos_por_disponibilidad),
+            'equipos_por_tipo': list(equipos_por_tipo),
             'mantenimientos_por_estado': list(mantenimientos_por_estado),
+            'mantenimientos_por_tipo': list(mantenimientos_por_tipo),
+            'perifericos_por_tipo': list(perifericos_por_tipo),
+            'licencias_por_estado': list(licencias_por_estado),
         }
         return Response(stats, status=status.HTTP_200_OK)
 

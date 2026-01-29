@@ -44,10 +44,11 @@ const AuditoriaDashboard = () => {
                 const queryParams = sedeActiva ? `?sede_id=${sedeActiva.id}` : '';
 
                 // Fetching all histories in parallel with sede filtering
-                const [equiposHist, perifericosHist, mantenimientos] = await Promise.all([
+                const [equiposHist, perifericosHist, mantenimientos, mantenimientosAcciones] = await Promise.all([
                     fetchAuthenticated(`/api/equipos/historial/${queryParams}`).catch(() => []),
                     fetchAuthenticated(`/api/perifericos/historial/${queryParams}`).catch(() => []),
-                    fetchAuthenticated(`/api/mantenimientos/${queryParams}`).catch(() => ({ results: [] }))
+                    fetchAuthenticated(`/api/mantenimientos/${queryParams}`).catch(() => ({ results: [] })),
+                    fetchAuthenticated(`/api/mantenimientos/historial-acciones/${queryParams}`).catch(() => ({ results: [] }))
                 ]);
 
                 const unified: AuditoriaEntry[] = [];
@@ -95,11 +96,27 @@ const AuditoriaDashboard = () => {
                         tipo: 'MANTENIMIENTO',
                         accion: `Mantenimiento ${m.tipo_mantenimiento}`,
                         entidad: m.equipo_asociado_nombre,
-                        detalle: `${m.usuario_responsable_username || 'Un técnico'} cambió el estado a ${m.estado_mantenimiento} para ${m.equipo_asociado_nombre}.`,
+                        detalle: `${m.usuario_responsable_username || 'Un técnico'} creó el mantenimiento para ${m.equipo_asociado_nombre}.`,
                         usuario: m.usuario_responsable_username,
-                        fecha: m.fecha_inicio,
+                        fecha: m.creado_en || m.fecha_inicio,
                         color: 'purple',
                         icon: '🔧'
+                    });
+                });
+
+                // 4. Process Maintenance Actions (Start/Finish/Cancel)
+                const actionsData = mantenimientosAcciones.results || mantenimientosAcciones || [];
+                actionsData.forEach((a: any) => {
+                    unified.push({
+                        id: `MA-${a.id}`,
+                        tipo: 'MANTENIMIENTO',
+                        accion: a.accion,
+                        entidad: a.equipo_nombre,
+                        detalle: a.detalle,
+                        usuario: a.usuario_username,
+                        fecha: a.fecha,
+                        color: a.accion.includes('Finalizó') ? 'emerald' : (a.accion.includes('Canceló') ? 'red' : 'purple'),
+                        icon: a.accion.includes('Finalizó') ? '✅' : (a.accion.includes('Canceló') ? '❌' : '⚙️')
                     });
                 });
 
